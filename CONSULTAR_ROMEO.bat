@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 title RiegoBot - Consultar Romeo
 
 set "BASE=%~dp0"
@@ -16,7 +16,7 @@ if "%ROMEO%"=="" (
 where python.exe >nul 2>nul
 if not errorlevel 1 (
   python -m dreamreader romeo "%ROMEO%"
-  set "RC=%ERRORLEVEL%"
+  set "RC=!ERRORLEVEL!"
   goto :END
 )
 
