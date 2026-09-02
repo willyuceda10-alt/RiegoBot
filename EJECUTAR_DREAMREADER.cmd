@@ -1,13 +1,23 @@
 @echo off
 setlocal
-title RiegoBot - DreamReader 1.3.3-alpha
+title RiegoBot - DreamReader
 set "BASE=%~dp0"
 set "RC=0"
+set "COMMAND=%~1"
+if "%COMMAND%"=="" set "COMMAND=discovery"
+
+if /I not "%COMMAND%"=="discovery" if /I not "%COMMAND%"=="extract" if /I not "%COMMAND%"=="doctor" (
+  echo [ERROR] Comando no valido: %COMMAND%
+  echo Use: discovery, extract o doctor.
+  set "RC=4"
+  goto :END
+)
 
 echo ============================================
-echo   RiegoBot - DreamReader 1.3.3-alpha
+echo   RiegoBot - DreamReader
 echo ============================================
 echo.
+echo Comando: %COMMAND%
 echo Carpeta del proyecto:
 echo %BASE%
 echo.
@@ -25,9 +35,9 @@ if not errorlevel 1 (
   echo Python detectado:
   python --version
   echo.
-  echo Ejecutando discovery...
+  echo Ejecutando %COMMAND%...
   echo.
-  python -m dreamreader discovery
+  python -m dreamreader %COMMAND%
   set "RC=%ERRORLEVEL%"
   goto :AFTER_RUN
 )
@@ -37,9 +47,9 @@ if not errorlevel 1 (
   echo Python Launcher detectado:
   py -3 --version
   echo.
-  echo Ejecutando discovery...
+  echo Ejecutando %COMMAND%...
   echo.
-  py -3 -m dreamreader discovery
+  py -3 -m dreamreader %COMMAND%
   set "RC=%ERRORLEVEL%"
   goto :AFTER_RUN
 )
