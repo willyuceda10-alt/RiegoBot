@@ -71,3 +71,7 @@ Adds a dedicated one-click data refresh workflow. `REFRESCAR_DATOS_RIEGOBOT.bat`
 ## 1.5.0-alpha
 
 Introduces the first continuous read-only collector mode. `python -m dreamreader realtime` polls Dream sources automatically (30 seconds by default), produces fresh normalized sessions without operator refresh, and writes an atomic collector health/status file. Includes one-click launchers for realtime collector and collector status. Manual refresh remains diagnostic only.
+
+## 1.5.1-alpha
+
+Hardens the continuous collector for 24/7 operation. Adds a singleton PID lock to prevent duplicate collectors, direct query lookup through `runtime/collector_status.json`, and automatic session retention (120 sessions by default) so 30-second polling does not grow the output tree indefinitely. Runtime state is now ignored by Git.
