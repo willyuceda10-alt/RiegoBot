@@ -1,0 +1,18 @@
+{
+  "entity": "WaterMeters",
+  "status": "PROBABLE",
+  "sourceDatabase": "TGDStatistics.mdb",
+  "definitionTable": "Water_Meters",
+  "readingTable": "LastWM",
+  "fieldMappings": {
+    "DreamId": "Dream",
+    "MeterId": ["WM_GType", "WM_Number"],
+    "ReadingMeterId": ["ObjSubType", "ObjNum"],
+    "RawValue": "ValueA",
+    "Timestamp": ["DateA", "TimeA"],
+    "MeterName": "WM_SName"
+  },
+  "join": ["Dream = Dream", "WM_GType = ObjSubType", "WM_Number = ObjNum"],
+  "notes": "All 47 definitions and 47 latest readings observed on 2026-09-02 joined one-to-one with no duplicate composite keys or unmatched rows. ValueA unit and WM type semantics are unresolved.",
+  "confidence": 0.8
+}
