@@ -214,7 +214,7 @@ function Invoke-DreamReader {
     $columns | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_columns.csv') -NoTypeInformation -Encoding utf8
     $comparison = @(Get-SchemaComparison $columns); $comparison | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_comparison.csv') -NoTypeInformation -Encoding utf8
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
-    $normalizedRows = @(); $waterMeterRows = @()
+    $normalizedRows = @(); $waterMeterRows = @(); $flowObservationRows = @()
     if ($ExtractionMode -eq 'NORMALIZED') {
         . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
 
@@ -229,10 +229,16 @@ function Invoke-DreamReader {
         } catch {
             $errors.Add("WaterMeters extraction: $($_.Exception.Message)")
         }
+
+        try {
+            $flowObservationRows = @(Invoke-FlowObservationExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("FlowObservations extraction: $($_.Exception.Message)")
+        }
     }
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
     $ended = Get-Date
-    $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
+    $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count; FlowObservations=$flowObservationRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
     $session | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionDir 'session.json') -Encoding utf8
     $comparisonSummary = "`n## Automated comparison results`n`nSession: $sessionId`n`nRows generated: $($comparison.Count). This section is produced from actual schema discovery; databases that could not be opened are represented by the session errors, not guessed.`n"
     Add-Content -LiteralPath (Join-Path $BaseDirectory 'docs\DREAM_SCHEMA_COMPARISON.md') -Value $comparisonSummary -Encoding utf8
