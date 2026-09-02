@@ -67,3 +67,7 @@ Adds intent-specific operator responses. Alarm questions no longer reuse flow/st
 ## 1.4.6-alpha
 
 Adds a dedicated one-click data refresh workflow. `REFRESCAR_DATOS_RIEGOBOT.bat` runs a fresh read-only normalized extraction so RiegoBot queries stop reusing stale session data after Dream MDB files are updated. A combined `REFRESCAR_Y_PREGUNTAR.bat` is included for local development testing.
+
+## 1.5.0-alpha
+
+Introduces the first continuous read-only collector mode. `python -m dreamreader realtime` polls Dream sources automatically (30 seconds by default), produces fresh normalized sessions without operator refresh, and writes an atomic collector health/status file. Includes one-click launchers for realtime collector and collector status. Manual refresh remains diagnostic only.
