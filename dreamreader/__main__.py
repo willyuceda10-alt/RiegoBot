@@ -17,7 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -64,7 +64,7 @@ def main() -> int:
             f"Ruta resuelta: {discovery_info['rootPath']}"
         )
 
-    if args.command == "extract":
+    if args.command in {"extract", "extract-candidates"}:
         if not dreams:
             payload["error"] = (
                 "Extraccion cancelada: no hay controladores Dream disponibles. "
@@ -77,7 +77,9 @@ def main() -> int:
             PROJECT_ROOT,
             "NORMALIZED",
             Path(discovery_info["rootPath"]),
+            allow_candidate_mappings=args.command == "extract-candidates",
         )
+        payload["candidateMappingsEnabled"] = args.command == "extract-candidates"
         payload["mdbBridge"] = bridge.to_dict()
         if not bridge.success:
             payload["error"] = (
