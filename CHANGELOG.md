@@ -19,3 +19,7 @@ Adds portable multiuser session contexts, unique session IDs, per-site/per-colle
 ## 1.3.4-alpha
 
 Adds Python orchestration of the existing read-only PowerShell MDB bridge through the extract command. The launcher now accepts discovery, doctor, and extract while keeping MDB access on the previously tested Jet/ACE path.
+
+## 1.3.5-alpha
+
+Adds evidence-backed latest raw RTWMFlow observations per water meter. Flow values remain explicitly unscaled and unit-unresolved. Adds a candidate LastAccum mapping without enabling accumulation extraction by default.
