@@ -83,3 +83,7 @@ Adds Windows autostart support for the realtime collector without GitHub Actions
 ## 1.5.3-alpha
 
 Adds read-only operational-event investigation for candidate extraction. When `extract-candidates` is used, DreamReader now exports up to 100 recent `TGDReports.mdb/ReportsRT` rows per Romeo with raw report code/text, failure/state fields, and `Repid1/Repid2/Repid2Name`. Realtime production remains unchanged with candidate mappings disabled. This evidence is intended to validate alarms and active-valve semantics before any operational claim is enabled.
+
+## 1.5.4-alpha
+
+Adds automatic summarization of candidate operational events. `EJECUTAR_ANALISIS_CANDIDATOS.cmd` now performs the candidate extraction and immediately prints grouped evidence by Romeo, report text/code, RepFail, State, and recent raw IDs. This keeps investigation concise while preserving raw semantics and avoiding premature alarm/valve interpretation.
