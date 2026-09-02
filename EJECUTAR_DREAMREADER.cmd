@@ -4,11 +4,13 @@ title RiegoBot - DreamReader
 set "BASE=%~dp0"
 set "RC=0"
 set "COMMAND=%~1"
+set "NO_PAUSE=0"
+if /I "%~2"=="/nopause" set "NO_PAUSE=1"
 if "%COMMAND%"=="" set "COMMAND=discovery"
 
-if /I not "%COMMAND%"=="discovery" if /I not "%COMMAND%"=="extract" if /I not "%COMMAND%"=="extract-candidates" if /I not "%COMMAND%"=="doctor" (
+if /I not "%COMMAND%"=="discovery" if /I not "%COMMAND%"=="extract" if /I not "%COMMAND%"=="extract-candidates" if /I not "%COMMAND%"=="candidate-events-summary" if /I not "%COMMAND%"=="doctor" (
   echo [ERROR] Comando no valido: %COMMAND%
-  echo Use: discovery, extract, extract-candidates o doctor.
+  echo Use: discovery, extract, extract-candidates, candidate-events-summary o doctor.
   set "RC=4"
   goto :END
 )
@@ -78,8 +80,10 @@ if exist "%BASE%logs" (
   echo %BASE%logs
   echo.
 )
-echo Presione una tecla para cerrar esta ventana.
-pause >nul
+if "%NO_PAUSE%"=="0" (
+  echo Presione una tecla para cerrar esta ventana.
+  pause >nul
+)
 
 popd >nul 2>nul
 exit /b %RC%
