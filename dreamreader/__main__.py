@@ -9,6 +9,7 @@ from .bridge import invoke_readonly_bridge
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
+from .realtime import run_realtime_collector
 from .query import answer_operator_question, build_operator_message, build_romeo_query, build_romeo_summary
 from .session import create_session
 from .validation import python_version_ok
@@ -18,7 +19,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -61,6 +62,9 @@ def main() -> int:
             payload = build_romeo_query(PROJECT_ROOT, str(args.target))
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0 if payload.get("success") else 6
+
+    if args.command == "realtime":
+        return run_realtime_collector(PROJECT_ROOT)
 
     config = load_config(PROJECT_ROOT)
     discovery_info = get_discovery_info(PROJECT_ROOT, config)
