@@ -5,6 +5,8 @@
 *.laccdb
 
 # Runtime outputs and logs
+runtime/*
+!runtime/.gitkeep
 output/*
 !output/.gitkeep
 logs/*
