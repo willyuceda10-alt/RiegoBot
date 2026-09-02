@@ -63,3 +63,7 @@ Adds a local natural-language command parser for operator questions. RiegoBot ca
 ## 1.4.5-alpha
 
 Adds intent-specific operator responses. Alarm questions no longer reuse flow/status wording: RiegoBot now states explicitly that the alarm source is unresolved and refuses to infer alarms from flow. Flow and irrigation questions also receive dedicated responses with freshness and semantic safety guards.
+
+## 1.4.6-alpha
+
+Adds a dedicated one-click data refresh workflow. `REFRESCAR_DATOS_RIEGOBOT.bat` runs a fresh read-only normalized extraction so RiegoBot queries stop reusing stale session data after Dream MDB files are updated. A combined `REFRESCAR_Y_PREGUNTAR.bat` is included for local development testing.
