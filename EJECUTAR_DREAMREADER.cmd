@@ -6,9 +6,9 @@ set "RC=0"
 set "COMMAND=%~1"
 if "%COMMAND%"=="" set "COMMAND=discovery"
 
-if /I not "%COMMAND%"=="discovery" if /I not "%COMMAND%"=="extract" if /I not "%COMMAND%"=="doctor" (
+if /I not "%COMMAND%"=="discovery" if /I not "%COMMAND%"=="extract" if /I not "%COMMAND%"=="extract-candidates" if /I not "%COMMAND%"=="doctor" (
   echo [ERROR] Comando no valido: %COMMAND%
-  echo Use: discovery, extract o doctor.
+  echo Use: discovery, extract, extract-candidates o doctor.
   set "RC=4"
   goto :END
 )
@@ -50,7 +50,7 @@ if not errorlevel 1 (
   echo Ejecutando %COMMAND%...
   echo.
   py -3 -m dreamreader %COMMAND%
-  set "RC=%ERRORLEVEL%"
+  set "RC=!ERRORLEVEL!"
   goto :AFTER_RUN
 )
 
