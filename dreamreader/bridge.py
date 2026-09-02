@@ -64,6 +64,7 @@ def invoke_readonly_bridge(
     project_root: Path,
     extraction_mode: str = "NORMALIZED",
     dream_root: Path | None = None,
+    allow_candidate_mappings: bool = False,
 ) -> BridgeResult:
     powershell = _find_powershell()
     script = project_root / "scripts" / "INICIAR_V1_3.ps1"
@@ -92,6 +93,9 @@ def invoke_readonly_bridge(
         "-ExtractionMode",
         mode,
     ]
+
+    if allow_candidate_mappings:
+        command.append("-AllowCandidateMappings")
 
     environment = os.environ.copy()
     if dream_root is not None:
