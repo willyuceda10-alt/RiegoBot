@@ -1,5 +1,5 @@
 {
-  "version": "1.4.6-alpha",
+  "version": "1.5.0-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -26,8 +26,26 @@
   "extractionMode": "DISCOVERY",
   "allowCandidateMappings": false,
   "dreams": [
-    {"dreamId":"11","name":"Dream 11","enabled":true},
-    {"dreamId":"13","name":"Dream 13","enabled":true},
-    {"dreamId":"17","name":"Dream 17","enabled":true}
-  ]
+    {
+      "dreamId": "11",
+      "name": "Dream 11",
+      "enabled": true
+    },
+    {
+      "dreamId": "13",
+      "name": "Dream 13",
+      "enabled": true
+    },
+    {
+      "dreamId": "17",
+      "name": "Dream 17",
+      "enabled": true
+    }
+  ],
+  "realtime": {
+    "enabled": true,
+    "pollIntervalSeconds": 30,
+    "allowCandidateMappings": false,
+    "maxConsecutiveFailures": 10
+  }
 }
