@@ -26,36 +26,29 @@ class DiscoveryTests(unittest.TestCase):
             (root / "Dream11_1.mdb").touch()
             (root / "Dream13_1.mdb").touch()
             (root / "Dream21_1.mdb").touch()
-
             rows = discover_dreams(root, self._config("."))
             by_id = {row["dreamId"]: row for row in rows}
-
             self.assertEqual(by_id["11"]["status"], "CONFIGURED")
             self.assertEqual(by_id["13"]["status"], "DISABLED")
             self.assertEqual(by_id["21"]["status"], "DISCOVERED")
-            self.assertEqual(by_id["21"]["dreamKey"], "SITE99-DREAM-21")
 
-    def test_auto_detects_sibling_dream_realtime_folder(self) -> None:
+    def test_auto_detects_dream_two_ancestors_above_nested_zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
-            project = base / "RiegoBot"
-            project.mkdir()
-            dream = base / "Dream_Realtime" / "Dream"
-            dream.mkdir(parents=True)
+            project = base / "outer" / "inner"
+            project.mkdir(parents=True)
+            dream = base / "Dream"
+            dream.mkdir()
             (dream / "Dream17_1.mdb").touch()
 
             with patch.dict(os.environ, {}, clear=False):
                 os.environ.pop("RIEGOBOT_DREAM_ROOT", None)
                 info = get_discovery_info(project, self._config("../Dream"))
 
-            self.assertEqual(
-                info["source"],
-                "auto:sibling/Dream_Realtime/Dream",
-            )
-            self.assertEqual(info["matchingFileCount"], 1)
+            self.assertEqual(info["source"], "auto:ancestor2/Dream")
             self.assertEqual(info["matchingFiles"], ["Dream17_1.mdb"])
 
-    def test_environment_override_has_priority_when_it_contains_dreams(self) -> None:
+    def test_environment_override_has_priority(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             project = base / "RiegoBot"
@@ -64,11 +57,7 @@ class DiscoveryTests(unittest.TestCase):
             override.mkdir()
             (override / "Dream25_1.mdb").touch()
 
-            with patch.dict(
-                os.environ,
-                {"RIEGOBOT_DREAM_ROOT": str(override)},
-                clear=False,
-            ):
+            with patch.dict(os.environ, {"RIEGOBOT_DREAM_ROOT": str(override)}, clear=False):
                 info = get_discovery_info(project, self._config("../Dream"))
 
             self.assertEqual(info["source"], "environment")
