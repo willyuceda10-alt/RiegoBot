@@ -25,7 +25,8 @@ if ($null -eq $python) { $python = Get-Command py -ErrorAction SilentlyContinue 
 if ($null -eq $python) {
     $findings.Add([pscustomobject]@{ Status='WARNING'; File='PATH'; Line=0; Reason='Python not available'; Text='Python 3.11+ is required for the portable control plane.' })
 } else {
-    $versionArgs = if ($python.Name -like 'py*') { @('-3','-c','import sys; print(sys.version_info.major, sys.version_info.minor)') } else { @('-c','import sys; print(sys.version_info.major, sys.version_info.minor)') }
+    $launcherName = [IO.Path]::GetFileNameWithoutExtension($python.Source).ToLowerInvariant()
+    $versionArgs = if ($launcherName -eq 'py') { @('-3','-c','import sys; print(sys.version_info.major, sys.version_info.minor)') } else { @('-c','import sys; print(sys.version_info.major, sys.version_info.minor)') }
     $version = & $python.Source @versionArgs
     if ($LASTEXITCODE -ne 0) { $findings.Add([pscustomobject]@{ Status='WARNING'; File='PATH'; Line=0; Reason='Python version check failed'; Text='' }) }
 }
