@@ -346,3 +346,83 @@ function Export-AccumulationSummary {
 
     return @($rows)
 }
+
+
+function Invoke-OperationalEventInvestigation {
+    param(
+        [string]$BaseDirectory,
+        $Config,
+        [object[]]$Dreams,
+        [string]$SessionDirectory,
+        [System.Collections.Generic.List[object]]$Metrics,
+        [string]$LogPath,
+        [bool]$AllowCandidateMappings
+    )
+
+    if (-not $AllowCandidateMappings) {
+        Write-ReaderLog $LogPath 'INFO' 'OperationalEvents' 'SKIPPED' 'ReportsRT' 'Operational investigation requires candidate mappings.'
+        return @()
+    }
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databaseRoot = Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)
+    $databasePath = Join-Path $databaseRoot 'TGDReports.mdb'
+    if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) {
+        Write-ReaderLog $LogPath 'WARN' 'OperationalEvents' 'UNRESOLVED' 'TGDReports.mdb' 'Database does not exist.'
+        return @()
+    }
+
+    $opened = $null
+    try {
+        $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+        $rows = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($dream in @($Dreams | Where-Object { $_.FileExists -and $_.Status -in @('CONFIGURED','DISCOVERED') })) {
+            if ([string]$dream.DreamId -notmatch '^[0-9]+$') { continue }
+
+            $sql = "SELECT TOP 100 [Dream], [RepDate], [RepTime], [RepCode], [RepCodeStr], [RepFail], [State], [Repid1], [Repid2], [Repid2Name] FROM [ReportsRT] WHERE [Dream] = $($dream.DreamId) ORDER BY [RepDate] DESC, [RepTime] DESC"
+            $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 100)
+
+            foreach ($source in $sourceRows) {
+                $timestamp = $null
+                if ($null -ne $source.RepDate -and $null -ne $source.RepTime) {
+                    $timestamp = ([datetime]$source.RepDate).Date.Add(([datetime]$source.RepTime).TimeOfDay).ToString('o')
+                }
+
+                $rows.Add([pscustomobject]@{
+                    RomeoKey        = [string]$dream.DreamKey
+                    RomeoId         = [string]$dream.DreamId
+                    Timestamp       = $timestamp
+                    ReportCodeRaw   = $source.RepCode
+                    ReportTextRaw   = [string]$source.RepCodeStr
+                    ReportFailRaw   = $source.RepFail
+                    StateRaw        = $source.State
+                    ReportId1Raw    = $source.Repid1
+                    ReportId2Raw    = $source.Repid2
+                    ReportId2NameRaw= [string]$source.Repid2Name
+                    SourceDatabase  = 'TGDReports.mdb'
+                    SourceTable     = 'ReportsRT'
+                    MappingStatus   = 'CANDIDATE'
+                })
+            }
+        }
+
+        @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'operational_events_candidate.csv') -NoTypeInformation -Encoding utf8
+        @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'operational_events_candidate.json') -Encoding utf8
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' 'TGDReports.mdb' 'OperationalEventInvestigation' $opened.Provider 0 @($rows).Count $true ''
+        return @($rows)
+    }
+    catch {
+        $message = $_.Exception.Message
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' 'TGDReports.mdb' 'OperationalEventInvestigation' '' 0 0 $false $message
+        Write-ReaderLog $LogPath 'ERROR' 'OperationalEvents' 'SHARED' 'TGDReports.mdb' $message
+        throw
+    }
+    finally {
+        if ($null -ne $opened) {
+            $opened.Connection.Close()
+            $opened.Connection.Dispose()
+        }
+    }
+}
