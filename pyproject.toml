@@ -4,6 +4,6 @@ build-backend = "setuptools.build_meta:__legacy__"
 
 [project]
 name = "dreamreader"
-version = "1.3.5a0"
+version = "1.3.6a0"
 requires-python = ">=3.11"
-description = "Portable read-only multi-Dream discovery and normalized MDB bridge control plane"
+description = "Portable read-only multi-Dream discovery, normalized MDB bridge, and Romeo snapshot control plane"
