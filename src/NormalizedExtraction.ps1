@@ -572,3 +572,72 @@ function Invoke-SharedDreamCoverageInvestigation {
     @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'shared_dream_coverage_candidate.json') -Encoding utf8
     return @($rows)
 }
+
+
+function Invoke-ReportsHistoryInvestigation {
+    param(
+        [string]$BaseDirectory,
+        $Config,
+        [object[]]$Dreams,
+        [string]$SessionDirectory,
+        [System.Collections.Generic.List[object]]$Metrics,
+        [string]$LogPath,
+        [bool]$AllowCandidateMappings
+    )
+
+    if (-not $AllowCandidateMappings) { return @() }
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databasePath = Join-Path (Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)) 'TGDReports.mdb'
+    if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { return @() }
+
+    $opened = $null
+    try {
+        $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+        $schemaColumns = $opened.Connection.GetSchema('Columns')
+        $reportColumns = @($schemaColumns.Select("TABLE_NAME = 'Reports'") | ForEach-Object { [string]$_['COLUMN_NAME'] })
+        $required = @('Dream','RepDate','RepTime','RepCode','RepCodeStr','RepFail','State','Repid1','Repid2','Repid2Name')
+        foreach ($name in $required) {
+            if ($reportColumns -notcontains $name) {
+                Write-ReaderLog $LogPath 'WARN' 'ReportsHistory' 'SHARED' 'TGDReports.mdb/Reports' ("Missing column: " + $name)
+                return @()
+            }
+        }
+
+        $rows = [System.Collections.Generic.List[object]]::new()
+        foreach ($dream in @($Dreams | Where-Object { $_.FileExists -and $_.Status -in @('CONFIGURED','DISCOVERED') })) {
+            if ([string]$dream.DreamId -notmatch '^[0-9]+$') { continue }
+            $sql = "SELECT TOP 100 [Dream], [RepDate], [RepTime], [RepCode], [RepCodeStr], [RepFail], [State], [Repid1], [Repid2], [Repid2Name] FROM [Reports] WHERE [Dream] = $($dream.DreamId) ORDER BY [RepDate] DESC, [RepTime] DESC"
+            $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 100)
+            foreach ($source in $sourceRows) {
+                $timestamp = $null
+                if ($null -ne $source.RepDate -and $null -ne $source.RepTime) {
+                    $timestamp = ([datetime]$source.RepDate).Date.Add(([datetime]$source.RepTime).TimeOfDay).ToString('o')
+                }
+                $rows.Add([pscustomobject]@{
+                    RomeoKey = [string]$dream.DreamKey
+                    RomeoId = [string]$dream.DreamId
+                    Timestamp = $timestamp
+                    ReportCodeRaw = $source.RepCode
+                    ReportTextRaw = [string]$source.RepCodeStr
+                    ReportFailRaw = $source.RepFail
+                    StateRaw = $source.State
+                    ReportId1Raw = $source.Repid1
+                    ReportId2Raw = $source.Repid2
+                    ReportId2NameRaw = [string]$source.Repid2Name
+                    SourceDatabase = 'TGDReports.mdb'
+                    SourceTable = 'Reports'
+                    MappingStatus = 'CANDIDATE'
+                })
+            }
+        }
+
+        @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'reports_history_candidate.csv') -NoTypeInformation -Encoding utf8
+        @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'reports_history_candidate.json') -Encoding utf8
+        return @($rows)
+    }
+    finally {
+        if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
+    }
+}
