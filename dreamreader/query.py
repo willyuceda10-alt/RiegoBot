@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -93,5 +94,71 @@ def build_romeo_query(project_root: Path, romeo_id: str) -> dict[str, Any]:
             "flowUnitStatus": "UNRESOLVED",
             "accumulationUnitStatus": "UNRESOLVED" if accumulation else None,
             "candidateStatus": status is not None,
+        },
+    }
+
+
+def _parse_timestamp(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def build_romeo_summary(project_root: Path, romeo_id: str, stale_after_hours: float = 24.0) -> dict[str, Any]:
+    payload = build_romeo_query(project_root, romeo_id)
+    if not payload.get("success"):
+        return payload
+
+    meters = list(payload.get("meters") or [])
+    timestamps = [
+        ts for ts in (_parse_timestamp(row.get("FlowTimestamp") or row.get("MeterTimestamp")) for row in meters)
+        if ts is not None
+    ]
+    latest = max(timestamps) if timestamps else None
+    now = datetime.now(timezone.utc)
+    age_hours = None
+    is_stale = True
+    if latest is not None:
+        age_hours = max(0.0, (now - latest.astimezone(timezone.utc)).total_seconds() / 3600.0)
+        is_stale = age_hours > stale_after_hours
+
+    nonzero = [
+        row for row in meters
+        if row.get("FlowRawValue") is not None and float(row.get("FlowRawValue") or 0) != 0.0
+    ]
+
+    return {
+        "success": True,
+        "romeoId": payload.get("romeoId"),
+        "romeoKey": payload.get("romeoKey"),
+        "sessionId": payload.get("sessionId"),
+        "sessionEndTime": payload.get("sessionEndTime"),
+        "latestDataTimestamp": latest.isoformat() if latest else None,
+        "dataAgeHours": round(age_hours, 2) if age_hours is not None else None,
+        "freshnessStatus": "STALE" if is_stale else "FRESH",
+        "staleAfterHours": stale_after_hours,
+        "meterCount": len(meters),
+        "nonZeroFlowObservationCount": len(nonzero),
+        "nonZeroFlowObservations": nonzero,
+        "accumulationSummary": payload.get("accumulationSummary"),
+        "candidateStatusObservation": payload.get("candidateStatusObservation"),
+        "safeInterpretation": {
+            "canClaimCurrentIrrigation": False,
+            "reason": (
+                "Los valores de flujo siguen sin unidad/semantica confirmada y la frescura debe validarse."
+                if not is_stale
+                else "La ultima lectura disponible supera el umbral de frescura configurado."
+            ),
+            "flowUnitStatus": "UNRESOLVED",
+            "accumulationUnitStatus": payload.get("dataSemantics", {}).get("accumulationUnitStatus"),
         },
     }
