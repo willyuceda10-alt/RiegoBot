@@ -6,4 +6,12 @@ Initial independent multi-Dream discovery architecture. Adds configuration, inve
 
 ## 1.3.1-alpha
 
-Adds normalized extraction framework, mapping evidence documentation, shared database relationship analysis, and a clearly labelled candidate DreamStatus observation derived from the latest `ReportsRT` event per Dream. Candidate mappings remain disabled by default.
+Adds normalized extraction framework, mapping evidence documentation, shared database relationship analysis, and a clearly labelled candidate DreamStatus observation derived from the latest ReportsRT event per Dream. Candidate mappings remain disabled by default.
+
+## 1.3.2-alpha
+
+Adds the first portable Python control-plane skeleton, Water_Meters/LastWM contract analysis, generic database-adapter interface, and migration documentation while preserving the tested PowerShell MDB bridge.
+
+## 1.3.3-alpha
+
+Adds portable multiuser session contexts, unique session IDs, per-site/per-collector output and log paths, Python discovery artifacts, `doctor` command, portability audit, and multiuser collision testing for shared-folder execution.
