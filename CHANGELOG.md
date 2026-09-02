@@ -91,3 +91,7 @@ Adds automatic summarization of candidate operational events. `EJECUTAR_ANALISIS
 ## 1.5.5-alpha
 
 Builds a candidate operational-state layer from recent ReportsRT evidence. Report codes 29/30 are treated only as observed OPEN/CLOSED transitions, keyed by raw Repid2/Repid2Name, while RepFail=true rows are collected as recent failure events. The output explicitly forbids claiming current valve state or active alarms until transition completeness and alarm lifecycle semantics are validated.
+
+## 1.5.6-alpha
+
+Fixes the Windows DreamReader launcher whitelist so the new `candidate-operational-state` command can run from `EJECUTAR_ANALISIS_CANDIDATOS.cmd`. No extraction semantics changed.
