@@ -505,3 +505,70 @@ function Invoke-ReportsRTCoverageInvestigation {
         }
     }
 }
+
+
+function Invoke-SharedDreamCoverageInvestigation {
+    param(
+        [string]$BaseDirectory,
+        $Config,
+        [string]$SessionDirectory,
+        [System.Collections.Generic.List[object]]$Metrics,
+        [string]$LogPath,
+        [bool]$AllowCandidateMappings
+    )
+
+    if (-not $AllowCandidateMappings) { return @() }
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databaseRoot = Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)
+    $rows = [System.Collections.Generic.List[object]]::new()
+
+    foreach ($database in @(Find-SharedDatabases -RootPath $databaseRoot | Where-Object { $_.Status -eq 'SHARED_CANDIDATE' })) {
+        $opened = $null
+        try {
+            $opened = Open-DatabaseReadOnly -DatabasePath $database.Path -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+            $schemaTables = $opened.Connection.GetSchema('Tables')
+            $schemaColumns = $opened.Connection.GetSchema('Columns')
+
+            foreach ($table in $schemaTables.Rows) {
+                $tableName = [string]$table['TABLE_NAME']
+                $tableType = [string]$table['TABLE_TYPE']
+                if ($tableType -ne 'TABLE' -or $tableName -match '^MSys') { continue }
+
+                $escapedName = $tableName.Replace("'", "''")
+                $columns = @($schemaColumns.Select("TABLE_NAME = '$escapedName'"))
+                $hasDream = @($columns | Where-Object { [string]$_['COLUMN_NAME'] -eq 'Dream' }).Count -gt 0
+                if (-not $hasDream) { continue }
+
+                $safeTable = $tableName.Replace(']', ']]')
+                $sql = "SELECT [Dream], COUNT(*) AS [RowCount] FROM [$safeTable] GROUP BY [Dream] ORDER BY [Dream]"
+                try {
+                    $coverageRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 500)
+                    foreach ($source in $coverageRows) {
+                        $rows.Add([pscustomobject]@{
+                            Database = [string]$database.DatabaseName
+                            TableName = $tableName
+                            DreamRaw = $source.Dream
+                            RowCount = [int]$source.RowCount
+                            MappingStatus = 'CANDIDATE'
+                        })
+                    }
+                }
+                catch {
+                    Write-ReaderLog $LogPath 'WARN' 'SharedDreamCoverage' 'SHARED' ($database.DatabaseName + '/' + $tableName) $_.Exception.Message
+                }
+            }
+        }
+        catch {
+            Write-ReaderLog $LogPath 'WARN' 'SharedDreamCoverage' 'SHARED' $database.DatabaseName $_.Exception.Message
+        }
+        finally {
+            if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
+        }
+    }
+
+    @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'shared_dream_coverage_candidate.csv') -NoTypeInformation -Encoding utf8
+    @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'shared_dream_coverage_candidate.json') -Encoding utf8
+    return @($rows)
+}
