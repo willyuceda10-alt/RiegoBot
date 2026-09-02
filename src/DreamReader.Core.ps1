@@ -255,8 +255,8 @@ function Invoke-DreamReader {
     $ended = Get-Date
     $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count; FlowObservations=$flowObservationRows.Count; RomeoSnapshot=$romeoSnapshotRows.Count; AccumulationObservations=$accumulationRows.Count; AccumulationSummary=$accumulationSummaryRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
     $session | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionDir 'session.json') -Encoding utf8
-    $comparisonSummary = "`n## Automated comparison results`n`nSession: $sessionId`n`nRows generated: $($comparison.Count). This section is produced from actual schema discovery; databases that could not be opened are represented by the session errors, not guessed.`n"
-    Add-Content -LiteralPath (Join-Path $BaseDirectory 'docs\DREAM_SCHEMA_COMPARISON.md') -Value $comparisonSummary -Encoding utf8
+    $comparisonSummary = "## Automated comparison results`n`nSession: $sessionId`n`nRows generated: $($comparison.Count). This section is produced from actual schema discovery; databases that could not be opened are represented by the session errors, not guessed.`n"
+    Set-Content -LiteralPath (Join-Path $sessionDir 'schema_comparison_summary.md') -Value $comparisonSummary -Encoding utf8
     Write-ReaderLog $logPath 'INFO' 'Session' '' '' "Completed with $($errors.Count) error(s)."
     [pscustomobject]@{ SessionDirectory=$sessionDir; Session=$session; Errors=$errors; LogPath=$logPath }
 }
