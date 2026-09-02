@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 
 from . import PROJECT_ROOT, __version__
 from .bridge import invoke_readonly_bridge
@@ -39,11 +40,8 @@ def main() -> int:
             "readOnly": bool(config.get("readOnly", False)),
             "discovery": discovery_info,
         }
-        if not discovery_info["rootExists"]:
-            payload["warning"] = (
-                "La carpeta de Dream configurada no existe. "
-                "Use config/config.local.json o la variable RIEGOBOT_DREAM_ROOT."
-            )
+        if discovery_info["matchingFileCount"] == 0:
+            payload["warning"] = "No se encontraron bases Dream para lectura."
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0
 
@@ -60,24 +58,31 @@ def main() -> int:
         "dreams": dreams,
     }
 
-    if not discovery_info["rootExists"]:
+    if discovery_info["matchingFileCount"] == 0:
         payload["warning"] = (
-            "No se encontro la carpeta de bases Dream. "
+            "No se encontraron bases Dream. "
             f"Ruta resuelta: {discovery_info['rootPath']}"
-        )
-    elif not dreams:
-        payload["warning"] = (
-            "La carpeta existe, pero no se encontraron archivos que coincidan con "
-            f"{discovery_info['pattern']}."
         )
 
     if args.command == "extract":
-        bridge = invoke_readonly_bridge(PROJECT_ROOT, "NORMALIZED")
+        if not dreams:
+            payload["error"] = (
+                "Extraccion cancelada: no hay controladores Dream disponibles. "
+                "No se ejecutara el bridge MDB."
+            )
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            return 5
+
+        bridge = invoke_readonly_bridge(
+            PROJECT_ROOT,
+            "NORMALIZED",
+            Path(discovery_info["rootPath"]),
+        )
         payload["mdbBridge"] = bridge.to_dict()
         if not bridge.success:
             payload["error"] = (
-                "El bridge MDB PowerShell no termino correctamente. "
-                "Revise stdout/stderr y el log generado."
+                "El bridge MDB no produjo una sesion valida. "
+                "Revise sessionSummary, stdout/stderr y los logs."
             )
             print(json.dumps(payload, indent=2, ensure_ascii=False))
             return bridge.exit_code or 1
