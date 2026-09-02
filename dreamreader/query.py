@@ -256,15 +256,80 @@ def answer_operator_question(project_root: Path, text: str, site_timezone: str =
         return parsed
 
     romeo_id = str(parsed["romeoId"])
-    response = build_operator_message(project_root, romeo_id, site_timezone=site_timezone)
-    if not response.get("success"):
-        return response
+    intent = str(parsed.get("intent") or "romeo_status")
+    summary = build_romeo_summary(project_root, romeo_id, site_timezone=site_timezone)
+    if not summary.get("success"):
+        return summary
+
+    latest = summary.get("latestDataTimestamp")
+    age_hours = summary.get("dataAgeHours")
+    freshness = summary.get("freshnessStatus")
+    meter_count = int(summary.get("meterCount") or 0)
+    nonzero_count = int(summary.get("nonZeroFlowObservationCount") or 0)
+    candidate_status = summary.get("candidateStatusObservation")
+
+    if intent == "alarm_status":
+        message = (
+            f"Romeo {romeo_id}: todavia no tengo una fuente de alarmas validada para confirmar si existe una alarma activa. "
+            "No voy a inferir una alarma a partir del flujo ni de otros datos."
+        )
+        if candidate_status is not None:
+            message += " Existe una observacion candidata de estado, pero no esta validada como alarma."
+        details = {
+            "alarmSourceStatus": "UNRESOLVED",
+            "alarmConfirmed": None,
+            "candidateStatusAvailable": candidate_status is not None,
+            "latestDataTimestamp": latest,
+            "freshnessStatus": freshness,
+        }
+    elif intent == "flow_status":
+        if freshness == "STALE":
+            message = (
+                f"Romeo {romeo_id}: la ultima lectura de flujo disponible es de {latest} "
+                f"y tiene aproximadamente {age_hours} horas de antiguedad. "
+                f"Hay {nonzero_count} lecturas de flujo crudo distintas de cero entre {meter_count} medidores. "
+                "Las unidades del flujo aun no estan confirmadas."
+            )
+        else:
+            message = (
+                f"Romeo {romeo_id}: hay {nonzero_count} lecturas de flujo crudo distintas de cero "
+                f"entre {meter_count} medidores. Las unidades del flujo aun no estan confirmadas."
+            )
+        details = {
+            "latestDataTimestamp": latest,
+            "dataAgeHours": age_hours,
+            "freshnessStatus": freshness,
+            "meterCount": meter_count,
+            "nonZeroFlowObservationCount": nonzero_count,
+            "flowUnitStatus": "UNRESOLVED",
+        }
+    elif intent == "irrigation_status":
+        if freshness == "STALE":
+            message = (
+                f"Romeo {romeo_id}: no puedo confirmar si esta regando ahora. "
+                f"La ultima lectura disponible es de {latest} y tiene aproximadamente {age_hours} horas de antiguedad."
+            )
+        else:
+            message = (
+                f"Romeo {romeo_id}: los datos son recientes, pero todavia no puedo confirmar que este regando "
+                "porque la semantica y las unidades del flujo no estan validadas."
+            )
+        details = {
+            "latestDataTimestamp": latest,
+            "dataAgeHours": age_hours,
+            "freshnessStatus": freshness,
+            "canClaimCurrentIrrigation": False,
+        }
+    else:
+        response = build_operator_message(project_root, romeo_id, site_timezone=site_timezone)
+        message = response.get("message")
+        details = response.get("details")
 
     return {
         "success": True,
-        "intent": parsed.get("intent"),
+        "intent": intent,
         "romeoId": romeo_id,
         "question": parsed.get("originalQuestion", text),
-        "message": response.get("message"),
-        "details": response.get("details"),
+        "message": message,
+        "details": details,
     }
