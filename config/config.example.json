@@ -1,6 +1,9 @@
 {
   "version": "1.4.1-alpha",
   "readOnly": true,
+  "site": {
+    "timezone": "America/Lima"
+  },
   "collector": {
     "collectorId": "COLLECTOR-LOCAL-01",
     "siteId": "SITE01",
