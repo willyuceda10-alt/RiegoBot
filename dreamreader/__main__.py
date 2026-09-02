@@ -9,6 +9,7 @@ from .bridge import invoke_readonly_bridge
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
+from .query import build_romeo_query
 from .session import create_session
 from .validation import python_version_ok
 
@@ -17,15 +18,24 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "romeo", "doctor"),
         nargs="?",
         default="discovery",
     )
+    parser.add_argument("target", nargs="?")
     args = parser.parse_args()
 
     if not python_version_ok():
         print("DreamReader requires Python 3.11 or later.")
         return 2
+
+    if args.command == "romeo":
+        if args.target is None or not str(args.target).isdigit():
+            print(json.dumps({"success": False, "error": "Use: python -m dreamreader romeo <numero>"}, indent=2, ensure_ascii=False))
+            return 2
+        payload = build_romeo_query(PROJECT_ROOT, str(args.target))
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 6
 
     config = load_config(PROJECT_ROOT)
     discovery_info = get_discovery_info(PROJECT_ROOT, config)
