@@ -1,4 +1,4 @@
-# RiegoBot / DreamReader 1.3.3-alpha
+# RiegoBot / DreamReader 1.3.4-alpha
 
 DreamReader es el núcleo técnico de RiegoBot para descubrir y leer múltiples controladores Dream en modo solo lectura.
 
@@ -10,127 +10,94 @@ Un Collector administra N Dreams.
 - `SiteId`: identifica la sede o fundo.
 - `DreamKey`: identidad estable `${SiteId}-DREAM-${DreamId}`.
 
-Agregar un nuevo archivo `Dream21_1.mdb` no requiere modificar lógica: si no está configurado aparecerá como `DISCOVERED`.
+El discovery detecta archivos `Dream*_1.mdb` de forma dinámica y no requiere lógica específica para 11, 13 o 17.
+
+## Ejecución
+
+Con doble clic:
+
+```
+EJECUTAR_DREAMREADER.cmd
+```
+
+Por defecto ejecuta `discovery`.
+
+También se puede ejecutar:
+
+```
+EJECUTAR_DREAMREADER.cmd doctor
+EJECUTAR_DREAMREADER.cmd discovery
+EJECUTAR_DREAMREADER.cmd extract
+```
+
+El comando `extract` usa Python como orquestador y delega la lectura MDB al bridge PowerShell probado en modo solo lectura.
 
 ## Carpeta compartida
 
-El proyecto está diseñado para ejecutarse desde:
+Compatible con rutas como:
 
 ```
 \\SERVIDOR\RiegoBot\
 ```
 
-o desde una unidad mapeada como:
+o:
 
 ```
 Z:\RiegoBot\
 ```
 
-No se requieren rutas del perfil del usuario. La raíz se obtiene desde los propios archivos del proyecto.
+El launcher usa `pushd` y no depende del directorio de trabajo actual.
 
-Permisos mínimos:
+## Configuración local
 
-- Lectura sobre código y MDB.
-- Escritura sobre `output/` y `logs/`.
-- No requiere permisos de administrador.
-
-Cada ejecución genera un `SessionId` único con fecha, host, usuario y sufijo aleatorio. Las salidas se separan así:
-
-```
-output/
-  SITE01/
-    COLLECTOR-LOCAL-01/
-      <SessionId>/
-```
-
-y los logs:
-
-```
-logs/
-  SITE01/
-    COLLECTOR-LOCAL-01/
-      DreamReader_<SessionId>.log
-```
-
-Esto evita que dos usuarios sobrescriban la misma sesión.
-
-## Python
-
-Se requiere Python 3.11 o posterior para el nuevo control plane.
-
-Ejecutar:
-
-```text
-EJECUTAR_DREAMREADER.cmd
-```
-
-El launcher utiliza `pushd`, por lo que también funciona desde rutas UNC.
-
-También puede ejecutarse:
-
-```bash
-python -m dreamreader doctor
-python -m dreamreader discovery
-python -m dreamreader extract
-```
-
-`doctor` valida la base portable. `discovery` crea una sesión e inventario. `extract` todavía mantiene el acceso MDB productivo en el puente PowerShell probado.
-
-## Configuración
-
-`config/config.json` contiene configuración compartida.
-
-Opcionalmente puede existir:
+La ruta de Dream puede ajustarse sin modificar GitHub mediante:
 
 ```
 config/config.local.json
 ```
 
-para ajustes locales. Este archivo no se versiona.
+o la variable:
 
-## MDB y solo lectura
+```
+RIEGOBOT_DREAM_ROOT
+```
 
-La ruta MDB estable continúa en PowerShell/OLE DB durante la migración.
+El discovery también revisa ubicaciones vecinas comunes como `..\Dream` y `..\Dream_Realtime\Dream`.
 
-Proveedores contemplados:
+## Seguridad
 
-- Microsoft.Jet.OLEDB.4.0
-- Microsoft.ACE.OLEDB.16.0
-- Microsoft.ACE.OLEDB.12.0
+El acceso MDB productivo permanece en PowerShell/OLE DB y usa `Mode=Read`.
 
-Las conexiones usan `Mode=Read`.
+No se implementan:
 
-No se implementa escritura en MDB ni acciones de control sobre Dream.
+- escrituras MDB;
+- cambios de válvulas;
+- cambios de programas;
+- polling productivo;
+- WhatsApp;
+- Azure;
+- Windows Service.
 
 ## Validación
-
-Ejecutar:
 
 ```powershell
 .\scripts\TEST_READONLY.ps1
 .\scripts\TEST_PORTABILITY.ps1
 .\scripts\TEST_MULTIUSER.ps1
+.\scripts\RUN_PYTHON_TESTS.ps1
 .\scripts\VALIDAR_V1_3.ps1
 ```
 
 ## Estado actual
 
-1.3.3-alpha incluye:
+La versión 1.3.4-alpha ya cubre:
 
 - discovery multi-Dream;
-- mappings con evidencia;
-- DreamStatus candidato;
-- contrato Water_Meters + LastWM;
-- base Python portable;
-- SessionId multiusuario;
-- outputs separados por sede/collector/sesión;
-- pruebas de portabilidad.
+- ejecución portable;
+- sesiones multiusuario;
+- salida JSON/CSV;
+- contratos Water_Meters + LastWM;
+- mappings de evidencia;
+- bridge PowerShell de solo lectura invocable desde Python.
 
-Todavía no incluye:
-
-- polling productivo;
-- API central;
-- Azure;
-- WhatsApp;
-- Windows Service;
-- comandos sobre válvulas o programas.
+El siguiente paso es validar `extract` en Windows real contra las MDB y revisar los artefactos normalizados generados.
