@@ -39,3 +39,7 @@ Adds per-Romeo summaries for candidate LastAccum observations, including record 
 ## 1.3.9-alpha
 
 Moves automated schema comparison summaries out of tracked documentation and into each runtime session. The updater also cleans the legacy generated change in `docs/DREAM_SCHEMA_COMPARISON.md` before pulling, keeping shared-folder Git worktrees clean.
+
+## 1.4.0-alpha
+
+Introduces the first RiegoBot query layer over normalized DreamReader session outputs. Adds `python -m dreamreader romeo <id>` and `CONSULTAR_ROMEO.bat`, which read the latest valid normalized session without reopening Dream MDB files. Flow and accumulation units remain explicitly unresolved, and candidate status observations remain labelled as candidate data.
