@@ -4,6 +4,7 @@ import argparse
 import json
 
 from . import PROJECT_ROOT, __version__
+from .bridge import invoke_readonly_bridge
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
@@ -71,10 +72,15 @@ def main() -> int:
         )
 
     if args.command == "extract":
-        payload["notice"] = (
-            "MDB extraction remains on the tested PowerShell read-only bridge "
-            "during the Python migration phase."
-        )
+        bridge = invoke_readonly_bridge(PROJECT_ROOT, "NORMALIZED")
+        payload["mdbBridge"] = bridge.to_dict()
+        if not bridge.success:
+            payload["error"] = (
+                "El bridge MDB PowerShell no termino correctamente. "
+                "Revise stdout/stderr y el log generado."
+            )
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            return bridge.exit_code or 1
 
     print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
