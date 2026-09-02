@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -16,6 +18,7 @@ class BridgeResult:
     stdout: str
     stderr: str
     latest_session: str | None
+    session_summary: dict[str, Any] | None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -26,6 +29,7 @@ class BridgeResult:
             "stdout": self.stdout,
             "stderr": self.stderr,
             "latestSession": self.latest_session,
+            "sessionSummary": self.session_summary,
         }
 
 
@@ -37,42 +41,39 @@ def _latest_session(project_root: Path) -> Path | None:
     output_root = project_root / "output"
     if not output_root.exists():
         return None
-
     sessions = list(output_root.rglob("session.json"))
     if not sessions:
         return None
-
     latest = max(sessions, key=lambda path: path.stat().st_mtime)
     return latest.parent
+
+
+def _read_session_summary(session_dir: Path | None) -> dict[str, Any] | None:
+    if session_dir is None:
+        return None
+    path = session_dir / "session.json"
+    if not path.is_file():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def invoke_readonly_bridge(
     project_root: Path,
     extraction_mode: str = "NORMALIZED",
+    dream_root: Path | None = None,
 ) -> BridgeResult:
     powershell = _find_powershell()
     script = project_root / "scripts" / "INICIAR_V1_3.ps1"
 
     if powershell is None:
-        return BridgeResult(
-            success=False,
-            exit_code=127,
-            executable=None,
-            command=[],
-            stdout="",
-            stderr="PowerShell no fue encontrado.",
-            latest_session=None,
-        )
+        return BridgeResult(False, 127, None, [], "", "PowerShell no fue encontrado.", None, None)
 
     if not script.is_file():
         return BridgeResult(
-            success=False,
-            exit_code=2,
-            executable=powershell,
-            command=[],
-            stdout="",
-            stderr=f"No existe el puente MDB: {script}",
-            latest_session=None,
+            False, 2, powershell, [], "", f"No existe el puente MDB: {script}", None, None
         )
 
     mode = extraction_mode.upper()
@@ -92,9 +93,16 @@ def invoke_readonly_bridge(
         mode,
     ]
 
+    environment = os.environ.copy()
+    if dream_root is not None:
+        environment["RIEGOBOT_DREAM_ROOT"] = str(dream_root)
+
+    before = set((project_root / "output").rglob("session.json")) if (project_root / "output").exists() else set()
+
     completed = subprocess.run(
         command,
         cwd=str(project_root),
+        env=environment,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -102,14 +110,33 @@ def invoke_readonly_bridge(
         check=False,
     )
 
-    latest = _latest_session(project_root)
+    after = set((project_root / "output").rglob("session.json")) if (project_root / "output").exists() else set()
+    new_sessions = after - before
+    latest = (
+        max(new_sessions, key=lambda path: path.stat().st_mtime).parent
+        if new_sessions
+        else _latest_session(project_root)
+    )
+    summary = _read_session_summary(latest)
+
+    semantic_success = completed.returncode == 0
+    exit_code = completed.returncode
+
+    if summary is not None:
+        errors = summary.get("Errors") or []
+        dreams_discovered = int(summary.get("DreamsDiscovered") or 0)
+        if errors or dreams_discovered == 0:
+            semantic_success = False
+            if exit_code == 0:
+                exit_code = 5
 
     return BridgeResult(
-        success=completed.returncode == 0,
-        exit_code=completed.returncode,
-        executable=powershell,
-        command=command,
-        stdout=completed.stdout.strip(),
-        stderr=completed.stderr.strip(),
-        latest_session=str(latest) if latest else None,
+        semantic_success,
+        exit_code,
+        powershell,
+        command,
+        completed.stdout.strip(),
+        completed.stderr.strip(),
+        str(latest) if latest else None,
+        summary,
     )
