@@ -79,3 +79,7 @@ Hardens the continuous collector for 24/7 operation. Adds a singleton PID lock t
 ## 1.5.2-alpha
 
 Adds Windows autostart support for the realtime collector without GitHub Actions. A single visible launcher, CONFIGURAR_AUTOINICIO_RIEGOBOT.bat, can install, inspect, or remove a per-user Windows logon scheduled task. The task runs the collector hidden through PowerShell and preserves the singleton lock.
+
+## 1.5.3-alpha
+
+Adds read-only operational-event investigation for candidate extraction. When `extract-candidates` is used, DreamReader now exports up to 100 recent `TGDReports.mdb/ReportsRT` rows per Romeo with raw report code/text, failure/state fields, and `Repid1/Repid2/Repid2Name`. Realtime production remains unchanged with candidate mappings disabled. This evidence is intended to validate alarms and active-valve semantics before any operational claim is enabled.
