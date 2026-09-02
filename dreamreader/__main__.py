@@ -9,7 +9,7 @@ from .bridge import invoke_readonly_bridge
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
-from .query import build_romeo_query, build_romeo_summary
+from .query import build_operator_message, build_romeo_query, build_romeo_summary
 from .session import create_session
 from .validation import python_version_ok
 
@@ -18,7 +18,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "romeo", "romeo-summary", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "romeo", "romeo-summary", "romeo-message", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -29,14 +29,20 @@ def main() -> int:
         print("DreamReader requires Python 3.11 or later.")
         return 2
 
-    if args.command in {"romeo", "romeo-summary"}:
+    if args.command in {"romeo", "romeo-summary", "romeo-message"}:
         if args.target is None or not str(args.target).isdigit():
             print(json.dumps({"success": False, "error": "Use: python -m dreamreader romeo <numero>"}, indent=2, ensure_ascii=False))
             return 2
+        query_config = load_config(PROJECT_ROOT)
+        site_timezone = str(query_config.get("site", {}).get("timezone", "UTC"))
         if args.command == "romeo-summary":
-            query_config = load_config(PROJECT_ROOT)
-            site_timezone = str(query_config.get("site", {}).get("timezone", "UTC"))
             payload = build_romeo_summary(
+                PROJECT_ROOT,
+                str(args.target),
+                site_timezone=site_timezone,
+            )
+        elif args.command == "romeo-message":
+            payload = build_operator_message(
                 PROJECT_ROOT,
                 str(args.target),
                 site_timezone=site_timezone,
