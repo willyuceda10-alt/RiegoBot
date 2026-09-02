@@ -1,0 +1,30 @@
+{
+  "version": "1.3.2-alpha",
+  "readOnly": true,
+  "collector": {
+    "collectorId": "COLLECTOR-LOCAL-01",
+    "siteId": "SITE01",
+    "name": "Dream Collector Local"
+  },
+  "discovery": {
+    "enabled": true,
+    "rootPath": "..\\Dream",
+    "dreamPattern": "Dream*_1.mdb",
+    "discoveryMode": "report-only"
+  },
+  "runtime": {
+    "queryTimeoutSeconds": 30,
+    "sampleRows": 25,
+    "maxRowsPerQuery": 200,
+    "realtimeMode": false,
+    "enablePerformanceMetrics": true,
+    "logLevel": "INFO"
+  },
+  "extractionMode": "DISCOVERY",
+  "allowCandidateMappings": false,
+  "dreams": [
+    {"dreamId":"11","name":"Dream 11","enabled":true},
+    {"dreamId":"13","name":"Dream 13","enabled":true},
+    {"dreamId":"17","name":"Dream 17","enabled":true}
+  ]
+}
