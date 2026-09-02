@@ -214,7 +214,7 @@ function Invoke-DreamReader {
     $columns | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_columns.csv') -NoTypeInformation -Encoding utf8
     $comparison = @(Get-SchemaComparison $columns); $comparison | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_comparison.csv') -NoTypeInformation -Encoding utf8
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
-    $normalizedRows = @(); $waterMeterRows = @(); $flowObservationRows = @(); $romeoSnapshotRows = @(); $accumulationRows = @(); $accumulationSummaryRows = @(); $operationalEventRows = @(); $reportsRTCoverageRows = @()
+    $normalizedRows = @(); $waterMeterRows = @(); $flowObservationRows = @(); $romeoSnapshotRows = @(); $accumulationRows = @(); $accumulationSummaryRows = @(); $operationalEventRows = @(); $reportsRTCoverageRows = @(); $sharedDreamCoverageRows = @()
     if ($ExtractionMode -eq 'NORMALIZED') {
         . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
 
@@ -261,6 +261,12 @@ function Invoke-DreamReader {
             $reportsRTCoverageRows = @(Invoke-ReportsRTCoverageInvestigation -BaseDirectory $BaseDirectory -Config $config -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
         } catch {
             $errors.Add("ReportsRT coverage investigation: $($_.Exception.Message)")
+        }
+
+        try {
+            $sharedDreamCoverageRows = @(Invoke-SharedDreamCoverageInvestigation -BaseDirectory $BaseDirectory -Config $config -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("Shared Dream coverage investigation: $($_.Exception.Message)")
         }
     }
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
