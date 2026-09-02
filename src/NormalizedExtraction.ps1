@@ -226,3 +226,35 @@ function Invoke-AccumulationObservationExtraction {
         throw
     } finally { if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() } }
 }
+
+function Export-AccumulationSummary {
+    param([object[]]$AccumulationObservations, [string]$SessionDirectory)
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $rows = [System.Collections.Generic.List[object]]::new()
+    foreach ($group in @($AccumulationObservations | Group-Object DreamKey)) {
+        $items = @($group.Group)
+        if ($items.Count -eq 0) { continue }
+        $dreamId = [string]$items[0].DreamId
+        $timestamps = @($items | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_.Timestamp) } | ForEach-Object { [datetime]$_.Timestamp })
+        $volumes = @($items | Where-Object { $null -ne $_.RawVolume } | ForEach-Object { [double]$_.RawVolume })
+        $times = @($items | Where-Object { $null -ne $_.RawTime } | ForEach-Object { [double]$_.RawTime })
+        $rows.Add([pscustomobject]@{
+            RomeoKey = [string]$group.Name
+            RomeoId = $dreamId
+            ObservationCount = $items.Count
+            LatestTimestamp = if ($timestamps.Count -gt 0) { ($timestamps | Measure-Object -Maximum).Maximum.ToString('o') } else { $null }
+            RawVolumeMin = if ($volumes.Count -gt 0) { ($volumes | Measure-Object -Minimum).Minimum } else { $null }
+            RawVolumeMax = if ($volumes.Count -gt 0) { ($volumes | Measure-Object -Maximum).Maximum } else { $null }
+            RawTimeMin = if ($times.Count -gt 0) { ($times | Measure-Object -Minimum).Minimum } else { $null }
+            RawTimeMax = if ($times.Count -gt 0) { ($times | Measure-Object -Maximum).Maximum } else { $null }
+            VolumeUnit = $null
+            TimeUnit = $null
+            UnitStatus = 'UNRESOLVED'
+            MappingStatus = 'CANDIDATE'
+        })
+    }
+    @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'accumulation_summary.csv') -NoTypeInformation -Encoding utf8
+    @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'accumulation_summary.json') -Encoding utf8
+    return @($rows)
+}
