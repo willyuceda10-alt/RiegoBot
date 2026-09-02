@@ -51,3 +51,7 @@ Adds freshness-aware Romeo summaries. RiegoBot now reports the latest normalized
 ## 1.4.2-alpha
 
 Corrects freshness calculations for Dream timestamps that do not include timezone information. Site timezone is now explicitly configurable and defaults to `America/Lima` in the pilot configuration, so Romeo summaries preserve local Dream time instead of assuming UTC.
+
+## 1.4.3-alpha
+
+Adds an operator-friendly RiegoBot response layer. The new `romeo-message` command and `PREGUNTAR_RIEGOBOT.bat` summarize freshness, meter counts, and non-zero raw flow observations in Spanish while preserving safety guards: stale data cannot be presented as current irrigation, and unresolved flow units are never converted into physical caudal claims.
