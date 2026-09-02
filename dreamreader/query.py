@@ -175,3 +175,43 @@ def build_romeo_summary(
             "accumulationUnitStatus": payload.get("dataSemantics", {}).get("accumulationUnitStatus"),
         },
     }
+
+
+def build_operator_message(project_root: Path, romeo_id: str, site_timezone: str = "UTC") -> dict[str, Any]:
+    summary = build_romeo_summary(project_root, romeo_id, site_timezone=site_timezone)
+    if not summary.get("success"):
+        return summary
+
+    freshness = summary.get("freshnessStatus")
+    latest = summary.get("latestDataTimestamp")
+    meter_count = int(summary.get("meterCount") or 0)
+    nonzero_count = int(summary.get("nonZeroFlowObservationCount") or 0)
+    age_hours = summary.get("dataAgeHours")
+
+    if freshness == "STALE":
+        message = (
+            f"Romeo {romeo_id}: la ultima lectura disponible es de {latest}. "
+            f"Tiene aproximadamente {age_hours} horas de antiguedad, por lo que no puedo confirmar el riego actual. "
+            f"Se encontraron {meter_count} medidores y {nonzero_count} lecturas de flujo crudo distintas de cero."
+        )
+    else:
+        message = (
+            f"Romeo {romeo_id}: la ultima lectura disponible es de {latest}. "
+            f"Se encontraron {meter_count} medidores y {nonzero_count} lecturas de flujo crudo distintas de cero. "
+            "Aun no puedo afirmar el caudal ni el riego actual porque las unidades y la semantica del flujo siguen sin confirmar."
+        )
+
+    return {
+        "success": True,
+        "romeoId": str(romeo_id),
+        "freshnessStatus": freshness,
+        "message": message,
+        "details": {
+            "latestDataTimestamp": latest,
+            "dataAgeHours": age_hours,
+            "meterCount": meter_count,
+            "nonZeroFlowObservationCount": nonzero_count,
+            "flowUnitStatus": "UNRESOLVED",
+            "canClaimCurrentIrrigation": False,
+        },
+    }
