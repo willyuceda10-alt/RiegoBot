@@ -96,3 +96,45 @@ function Invoke-WaterMeterExtraction {
         return @($rows)
     } finally { $opened.Connection.Close(); $opened.Connection.Dispose() }
 }
+
+function Invoke-FlowObservationExtraction {
+    param([string]$BaseDirectory, $Config, [object[]]$Dreams, [string]$SessionDirectory, [System.Collections.Generic.List[object]]$Metrics, [string]$LogPath, [bool]$AllowCandidateMappings)
+    $mapping = Resolve-Mapping -MappingsDirectory (Join-Path $BaseDirectory 'mappings') -Entity 'FlowObservations' -AllowCandidateMappings $AllowCandidateMappings
+    if ($null -eq $mapping) { Write-ReaderLog $LogPath 'INFO' 'Normalizer' 'SKIPPED' 'FlowObservations' 'Mapping no disponible.'; return @() }
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'; New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databasePath = Join-Path (Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)) ([string]$mapping.sourceDatabase)
+    if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { Write-ReaderLog $LogPath 'WARN' 'FlowObservations' 'UNRESOLVED' ([string]$mapping.sourceDatabase) 'Flow database does not exist.'; return @() }
+    $opened = $null
+    try {
+        $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+        $definitions = @(Invoke-SafeRead -Connection $opened.Connection -Sql 'SELECT [Dream], [WM_Ind], [WM_GType], [WM_Number], [WM_SName] FROM [Water_Meters]' -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery ([int]$Config.runtime.maxRowsPerQuery))
+        $rows = [System.Collections.Generic.List[object]]::new()
+        foreach ($definition in $definitions) {
+            if ([string]$definition.Dream -notmatch '^[0-9]+$') { continue }
+            if ([string]$definition.WM_GType -notmatch '^[0-9]+$') { continue }
+            if ([string]$definition.WM_Number -notmatch '^[0-9]+$') { continue }
+            $dream = $Dreams | Where-Object { $_.DreamId -eq [string]$definition.Dream } | Select-Object -First 1
+            if ($null -eq $dream) { continue }
+            $sql = "SELECT TOP 1 [Dream], [ObjSubType], [ObjNum], [DateA], [TimeA], [ValueA] FROM [RTWMFlow] WHERE [Dream] = $($definition.Dream) AND [ObjSubType] = $($definition.WM_GType) AND [ObjNum] = $($definition.WM_Number) ORDER BY [DateA] DESC, [TimeA] DESC"
+            $observations = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 1)
+            foreach ($source in $observations) {
+                $timestamp = $null
+                if ($null -ne $source.DateA -and $null -ne $source.TimeA) { $timestamp = ([datetime]$source.DateA).Date.Add(([datetime]$source.TimeA).TimeOfDay).ToString('o') }
+                $meterName = $null
+                if (-not [string]::IsNullOrWhiteSpace([string]$definition.WM_SName)) { $meterName = [string]$definition.WM_SName }
+                $rows.Add([pscustomobject]@{ CollectorId=[string]$Config.collector.collectorId; SiteId=[string]$Config.collector.siteId; DreamKey=[string]$dream.DreamKey; DreamId=[string]$dream.DreamId; Timestamp=$timestamp; MeterId=([string]$definition.WM_GType + ':' + [string]$definition.WM_Number); MeterName=$meterName; MeterIndex=$definition.WM_Ind; MeterGroupRaw=$definition.WM_GType; MeterNumberRaw=$definition.WM_Number; RawValue=$source.ValueA; Unit=$null; UnitStatus='UNRESOLVED'; SourceDatabase=[string]$mapping.sourceDatabase; SourceTable=[string]$mapping.sourceTable; MappingStatus=[string]$mapping.status; Confidence=[double]$mapping.confidence })
+            }
+        }
+        @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'flow_observations.csv') -NoTypeInformation -Encoding utf8
+        @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'flow_observations.json') -Encoding utf8
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' $mapping.sourceDatabase 'FlowObservationQuery' $opened.Provider 0 @($rows).Count $true ''
+        return @($rows)
+    } catch {
+        $message = $_.Exception.Message
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' $mapping.sourceDatabase 'FlowObservationQuery' '' 0 0 $false $message
+        Write-ReaderLog $LogPath 'ERROR' 'FlowObservations' 'SHARED' $mapping.sourceDatabase $message
+        throw
+    } finally {
+        if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
+    }
+}
