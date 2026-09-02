@@ -138,3 +138,46 @@ function Invoke-FlowObservationExtraction {
         if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
     }
 }
+
+function Export-RomeoSnapshot {
+    param(
+        [object[]]$WaterMeters,
+        [object[]]$FlowObservations,
+        [string]$SessionDirectory
+    )
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+
+    $flowIndex = @{}
+    foreach ($flow in @($FlowObservations)) {
+        $key = ([string]$flow.DreamKey + '|' + [string]$flow.MeterId)
+        $flowIndex[$key] = $flow
+    }
+
+    $rows = [System.Collections.Generic.List[object]]::new()
+    foreach ($meter in @($WaterMeters)) {
+        $key = ([string]$meter.DreamKey + '|' + [string]$meter.MeterId)
+        $flow = $flowIndex[$key]
+
+        $rows.Add([pscustomobject]@{
+            RomeoKey            = [string]$meter.DreamKey
+            RomeoId             = [string]$meter.DreamId
+            MeterId             = [string]$meter.MeterId
+            MeterName           = $meter.MeterName
+            MeterTimestamp      = $meter.Timestamp
+            MeterRawValue       = $meter.RawValue
+            FlowTimestamp       = if ($null -ne $flow) { $flow.Timestamp } else { $null }
+            FlowRawValue        = if ($null -ne $flow) { $flow.RawValue } else { $null }
+            FlowUnit            = $null
+            FlowUnitStatus      = 'UNRESOLVED'
+            MeterMappingStatus  = $meter.MappingStatus
+            FlowMappingStatus   = if ($null -ne $flow) { $flow.MappingStatus } else { $null }
+        })
+    }
+
+    @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'romeo_snapshot.csv') -NoTypeInformation -Encoding utf8
+    @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'romeo_snapshot.json') -Encoding utf8
+
+    return @($rows)
+}
