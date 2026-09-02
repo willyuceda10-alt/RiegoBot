@@ -107,3 +107,7 @@ Adds a generic read-only Dream coverage scanner across all detected shared MDB d
 ## 1.5.9-alpha
 
 Adds read-only investigation of TGDReports.mdb/Reports for all configured Romeos. The candidate analyzer compares recent historical report codes, valve open/close transitions (29/30), failure flags, IDs, and timestamps for Romeos 11/13/17 while keeping Reports distinct from ReportsRT and making no realtime-state claim.
+
+## 1.6.0-alpha
+
+Formalizes the scalable N-Romeo architecture. Adds automated discovery coverage for arbitrary Dream IDs, clarifies that configured Dreams are overrides rather than a fixed allowlist, and records product requirements for role-based access, weekly summaries, WhatsApp incident response with photo evidence, repeated SLA reminders, escalation, and central monitoring. Dream access remains read-only.
