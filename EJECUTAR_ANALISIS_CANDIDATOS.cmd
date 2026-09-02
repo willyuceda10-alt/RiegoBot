@@ -3,6 +3,13 @@ call "%~dp0EJECUTAR_DREAMREADER.cmd" extract-candidates /nopause
 if errorlevel 1 exit /b %ERRORLEVEL%
 echo.
 echo ============================================
+echo   Cobertura de eventos ReportsRT
+echo ============================================
+echo.
+call "%~dp0EJECUTAR_DREAMREADER.cmd" reportsrt-coverage /nopause
+if errorlevel 1 exit /b %ERRORLEVEL%
+echo.
+echo ============================================
 echo   Resumen de eventos operativos candidatos
 echo ============================================
 echo.
