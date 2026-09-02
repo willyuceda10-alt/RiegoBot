@@ -33,11 +33,16 @@ def main() -> int:
         if args.target is None or not str(args.target).isdigit():
             print(json.dumps({"success": False, "error": "Use: python -m dreamreader romeo <numero>"}, indent=2, ensure_ascii=False))
             return 2
-        payload = (
-            build_romeo_summary(PROJECT_ROOT, str(args.target))
-            if args.command == "romeo-summary"
-            else build_romeo_query(PROJECT_ROOT, str(args.target))
-        )
+        if args.command == "romeo-summary":
+            query_config = load_config(PROJECT_ROOT)
+            site_timezone = str(query_config.get("site", {}).get("timezone", "UTC"))
+            payload = build_romeo_summary(
+                PROJECT_ROOT,
+                str(args.target),
+                site_timezone=site_timezone,
+            )
+        else:
+            payload = build_romeo_query(PROJECT_ROOT, str(args.target))
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0 if payload.get("success") else 6
 
