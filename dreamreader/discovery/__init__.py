@@ -9,27 +9,107 @@ from typing import Any
 ENV_DREAM_ROOT = "RIEGOBOT_DREAM_ROOT"
 
 
-def resolve_path(project_root: Path, configured_path: str) -> Path:
+def _candidate_roots(project_root: Path, configured_path: str) -> list[tuple[str, Path]]:
+    configured = Path(configured_path)
+    candidates: list[tuple[str, Path]] = []
+
     override = os.environ.get(ENV_DREAM_ROOT, "").strip()
-    raw_path = override or configured_path
-    path = Path(raw_path)
-    return path if path.is_absolute() else (project_root / path).resolve()
+    if override:
+        candidates.append(("environment", Path(override)))
+
+    configured_resolved = (
+        configured
+        if configured.is_absolute()
+        else (project_root / configured).resolve()
+    )
+    candidates.append(("config", configured_resolved))
+
+    # Portable fallbacks relative to the project location. These avoid
+    # user-specific absolute paths and cover common extracted-folder layouts.
+    parent = project_root.parent
+    fallbacks = [
+        ("auto:project/Dream", project_root / "Dream"),
+        ("auto:sibling/Dream", parent / "Dream"),
+        ("auto:sibling/Dream_Realtime/Dream", parent / "Dream_Realtime" / "Dream"),
+        ("auto:sibling/Dream_Realtime", parent / "Dream_Realtime"),
+    ]
+    candidates.extend(fallbacks)
+
+    seen: set[str] = set()
+    unique: list[tuple[str, Path]] = []
+    for source, candidate in candidates:
+        resolved = candidate.resolve()
+        key = str(resolved).lower()
+        if key not in seen:
+            seen.add(key)
+            unique.append((source, resolved))
+    return unique
+
+
+def resolve_discovery_root(
+    project_root: Path,
+    config: dict[str, Any],
+) -> tuple[str, Path]:
+    configured_path = config["discovery"]["rootPath"]
+    pattern = config["discovery"]["dreamPattern"]
+
+    candidates = _candidate_roots(project_root, configured_path)
+
+    # Prefer a folder that actually contains Dream databases.
+    for source, root in candidates:
+        if root.is_dir() and any(
+            item.is_file() and fnmatch.fnmatch(item.name.lower(), pattern.lower())
+            for item in root.iterdir()
+        ):
+            return source, root
+
+    # If no candidate contains matches, still prefer an existing configured or
+    # environment directory so diagnostics can distinguish empty vs missing.
+    for source, root in candidates:
+        if source in {"environment", "config"} and root.is_dir():
+            return source, root
+
+    # Fall back to configured path for a deterministic diagnostic.
+    for source, root in candidates:
+        if source == "config":
+            return source, root
+
+    return candidates[0]
 
 
 def get_discovery_info(project_root: Path, config: dict[str, Any]) -> dict[str, Any]:
-    root = resolve_path(project_root, config["discovery"]["rootPath"])
+    source, root = resolve_discovery_root(project_root, config)
     pattern = config["discovery"]["dreamPattern"]
+
+    matches: list[str] = []
+    if root.is_dir():
+        matches = sorted(
+            item.name
+            for item in root.iterdir()
+            if item.is_file()
+            and fnmatch.fnmatch(item.name.lower(), pattern.lower())
+        )
+
     return {
         "rootPath": str(root),
         "rootExists": root.is_dir(),
         "pattern": pattern,
-        "source": "environment" if os.environ.get(ENV_DREAM_ROOT, "").strip() else "config",
+        "source": source,
         "environmentVariable": ENV_DREAM_ROOT,
+        "matchingFiles": matches,
+        "matchingFileCount": len(matches),
+        "candidatesChecked": [
+            {"source": candidate_source, "path": str(candidate_path)}
+            for candidate_source, candidate_path in _candidate_roots(
+                project_root,
+                config["discovery"]["rootPath"],
+            )
+        ],
     }
 
 
 def discover_dreams(project_root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
-    root = resolve_path(project_root, config["discovery"]["rootPath"])
+    _, root = resolve_discovery_root(project_root, config)
     configured = {str(item["dreamId"]): item for item in config.get("dreams", [])}
     result: list[dict[str, Any]] = []
 
