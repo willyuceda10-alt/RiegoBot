@@ -42,6 +42,10 @@ function Invoke-NormalizedExtraction {
     $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
     New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
     $mapping = Resolve-Mapping -MappingsDirectory (Join-Path $BaseDirectory 'mappings') -Entity 'DreamStatus' -AllowCandidateMappings $AllowCandidateMappings
+    if ($null -eq $mapping) {
+        Write-ReaderLog $LogPath 'INFO' 'Normalizer' 'SKIPPED' 'DreamStatus' 'Mapping CANDIDATE deshabilitado o no disponible.'
+        return @()
+    }
     $databaseRoot = Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)
     $databasePath = Join-Path $databaseRoot ([string]$mapping.sourceDatabase)
     if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { Write-ReaderLog $LogPath 'WARN' 'Normalizer' 'UNRESOLVED' $mapping.sourceDatabase 'Mapped database does not exist.'; return @() }
@@ -82,7 +86,9 @@ function Invoke-WaterMeterExtraction {
             $dream = $Dreams | Where-Object { $_.DreamId -eq [string]$source.Dream } | Select-Object -First 1
             if ($null -eq $dream) { continue }
             $timestamp = ([datetime]$source.DateA).Date.Add(([datetime]$source.TimeA).TimeOfDay).ToString('o')
-            [pscustomobject]@{ CollectorId=$Config.collector.collectorId; SiteId=$Config.collector.siteId; DreamKey=$dream.DreamKey; DreamId=$dream.DreamId; Timestamp=$timestamp; MeterId=([string]$source.WM_GType + ':' + [string]$source.WM_Number); MeterName=(if ([string]::IsNullOrWhiteSpace([string]$source.WM_SName)) {$null} else {$source.WM_SName}); MeterIndex=$source.WM_Ind; MeterGroupRaw=$source.WM_GType; MeterNumberRaw=$source.WM_Number; MeterRatioRaw=$source.WM_Ratio; RawValue=$source.ValueA; Unit=$null; UnitStatus='UNRESOLVED'; SourceDatabase=$mapping.sourceDatabase; SourceTable='Water_Meters + LastWM'; MappingStatus=$mapping.status; Confidence=$mapping.confidence }
+            $meterName = $null
+            if (-not [string]::IsNullOrWhiteSpace([string]$source.WM_SName)) { $meterName = [string]$source.WM_SName }
+            [pscustomobject]@{ CollectorId=$Config.collector.collectorId; SiteId=$Config.collector.siteId; DreamKey=$dream.DreamKey; DreamId=$dream.DreamId; Timestamp=$timestamp; MeterId=([string]$source.WM_GType + ':' + [string]$source.WM_Number); MeterName=$meterName; MeterIndex=$source.WM_Ind; MeterGroupRaw=$source.WM_GType; MeterNumberRaw=$source.WM_Number; MeterRatioRaw=$source.WM_Ratio; RawValue=$source.ValueA; Unit=$null; UnitStatus='UNRESOLVED'; SourceDatabase=$mapping.sourceDatabase; SourceTable='Water_Meters + LastWM'; MappingStatus=$mapping.status; Confidence=$mapping.confidence }
         }
         @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'water_meters.csv') -NoTypeInformation -Encoding utf8
         @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'water_meters.json') -Encoding utf8
