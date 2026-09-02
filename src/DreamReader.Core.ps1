@@ -18,6 +18,9 @@ function New-SessionDirectory {
 
 function Resolve-ConfiguredPath {
     param([string]$BaseDirectory, [string]$ConfiguredPath)
+    if (-not [string]::IsNullOrWhiteSpace($env:RIEGOBOT_DREAM_ROOT)) {
+        return [System.IO.Path]::GetFullPath($env:RIEGOBOT_DREAM_ROOT)
+    }
     if ([System.IO.Path]::IsPathRooted($ConfiguredPath)) { return $ConfiguredPath }
     return [System.IO.Path]::GetFullPath((Join-Path $BaseDirectory $ConfiguredPath))
 }
