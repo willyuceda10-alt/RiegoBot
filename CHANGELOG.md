@@ -14,4 +14,8 @@ Adds the first portable Python control-plane skeleton, Water_Meters/LastWM contr
 
 ## 1.3.3-alpha
 
-Adds portable multiuser session contexts, unique session IDs, per-site/per-collector output and log paths, Python discovery artifacts, `doctor` command, portability audit, and multiuser collision testing for shared-folder execution.
+Adds portable multiuser session contexts, unique session IDs, per-site/per-collector output and log paths, Python discovery artifacts, doctor command, portability audit, and multiuser collision testing for shared-folder execution.
+
+## 1.3.4-alpha
+
+Adds Python orchestration of the existing read-only PowerShell MDB bridge through the extract command. The launcher now accepts discovery, doctor, and extract while keeping MDB access on the previously tested Jet/ACE path.
