@@ -426,3 +426,82 @@ function Invoke-OperationalEventInvestigation {
         }
     }
 }
+
+
+function Invoke-ReportsRTCoverageInvestigation {
+    param(
+        [string]$BaseDirectory,
+        $Config,
+        [string]$SessionDirectory,
+        [System.Collections.Generic.List[object]]$Metrics,
+        [string]$LogPath,
+        [bool]$AllowCandidateMappings
+    )
+
+    if (-not $AllowCandidateMappings) {
+        Write-ReaderLog $LogPath 'INFO' 'ReportsRTCoverage' 'SKIPPED' 'ReportsRT' 'Coverage investigation requires candidate mappings.'
+        return @()
+    }
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databaseRoot = Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)
+    $databasePath = Join-Path $databaseRoot 'TGDReports.mdb'
+    if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) {
+        Write-ReaderLog $LogPath 'WARN' 'ReportsRTCoverage' 'UNRESOLVED' 'TGDReports.mdb' 'Database does not exist.'
+        return @()
+    }
+
+    $opened = $null
+    try {
+        $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+        $sql = 'SELECT [Dream], COUNT(*) AS [EventCount], MAX([RepDate]) AS [LatestDate] FROM [ReportsRT] GROUP BY [Dream] ORDER BY [Dream]'
+        $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 500)
+
+        $rows = foreach ($source in $sourceRows) {
+            $latestTime = $null
+            if ($null -ne $source.LatestDate -and [string]$source.Dream -match '^[0-9]+$') {
+                $dateLiteral = ([datetime]$source.LatestDate).ToString('MM/dd/yyyy')
+                $timeSql = "SELECT TOP 1 [RepTime] FROM [ReportsRT] WHERE [Dream] = $($source.Dream) AND [RepDate] = #$dateLiteral# ORDER BY [RepTime] DESC"
+                $timeRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $timeSql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 1)
+                if ($timeRows.Count -gt 0) { $latestTime = $timeRows[0].RepTime }
+            }
+
+            $latestTimestamp = $null
+            if ($null -ne $source.LatestDate) {
+                $datePart = ([datetime]$source.LatestDate).Date
+                if ($null -ne $latestTime) {
+                    $latestTimestamp = $datePart.Add(([datetime]$latestTime).TimeOfDay).ToString('o')
+                } else {
+                    $latestTimestamp = $datePart.ToString('o')
+                }
+            }
+
+            [pscustomobject]@{
+                DreamRaw = $source.Dream
+                EventCount = [int]$source.EventCount
+                LatestTimestamp = $latestTimestamp
+                SourceDatabase = 'TGDReports.mdb'
+                SourceTable = 'ReportsRT'
+                MappingStatus = 'CANDIDATE'
+            }
+        }
+
+        @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'reportsrt_coverage_candidate.csv') -NoTypeInformation -Encoding utf8
+        @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'reportsrt_coverage_candidate.json') -Encoding utf8
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' 'TGDReports.mdb' 'ReportsRTCoverageInvestigation' $opened.Provider 0 @($rows).Count $true ''
+        return @($rows)
+    }
+    catch {
+        $message = $_.Exception.Message
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' 'TGDReports.mdb' 'ReportsRTCoverageInvestigation' '' 0 0 $false $message
+        Write-ReaderLog $LogPath 'ERROR' 'ReportsRTCoverage' 'SHARED' 'TGDReports.mdb' $message
+        throw
+    }
+    finally {
+        if ($null -ne $opened) {
+            $opened.Connection.Close()
+            $opened.Connection.Dispose()
+        }
+    }
+}
