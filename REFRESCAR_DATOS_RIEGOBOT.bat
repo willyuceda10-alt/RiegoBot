@@ -3,6 +3,8 @@ setlocal EnableDelayedExpansion
 title RiegoBot - Refrescar datos
 
 set "BASE=%~dp0"
+set "NO_PAUSE=0"
+if /I "%~1"=="/nopause" set "NO_PAUSE=1"
 pushd "%BASE%" >nul 2>nul
 
 echo ============================================
@@ -33,6 +35,6 @@ echo Las proximas consultas usaran la nueva sesion.
 echo.
 echo Codigo de salida: !RC!
 echo.
-pause
+if "!NO_PAUSE!"=="0" pause
 popd >nul 2>nul
 exit /b !RC!
