@@ -59,3 +59,7 @@ Adds an operator-friendly RiegoBot response layer. The new `romeo-message` comma
 ## 1.4.4-alpha
 
 Adds a local natural-language command parser for operator questions. RiegoBot can now identify Romeo/Dream/controlador numbers from phrases such as `que pasa con el Romeo 11`, `estado Dream 13`, `caudal del controlador 17`, and classify basic intents (status, flow, irrigation, alarm) without external AI services. The new `RIEGOBOT_PREGUNTA.bat` provides a one-click interactive test.
+
+## 1.4.5-alpha
+
+Adds intent-specific operator responses. Alarm questions no longer reuse flow/status wording: RiegoBot now states explicitly that the alarm source is unresolved and refuses to infer alarms from flow. Flow and irrigation questions also receive dedicated responses with freshness and semantic safety guards.
