@@ -75,3 +75,7 @@ Introduces the first continuous read-only collector mode. `python -m dreamreader
 ## 1.5.1-alpha
 
 Hardens the continuous collector for 24/7 operation. Adds a singleton PID lock to prevent duplicate collectors, direct query lookup through `runtime/collector_status.json`, and automatic session retention (120 sessions by default) so 30-second polling does not grow the output tree indefinitely. Runtime state is now ignored by Git.
+
+## 1.5.2-alpha
+
+Adds Windows autostart support for the realtime collector without GitHub Actions. A single visible launcher, CONFIGURAR_AUTOINICIO_RIEGOBOT.bat, can install, inspect, or remove a per-user Windows logon scheduled task. The task runs the collector hidden through PowerShell and preserves the singleton lock.
