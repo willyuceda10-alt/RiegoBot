@@ -95,3 +95,7 @@ Builds a candidate operational-state layer from recent ReportsRT evidence. Repor
 ## 1.5.6-alpha
 
 Fixes the Windows DreamReader launcher whitelist so the new `candidate-operational-state` command can run from `EJECUTAR_ANALISIS_CANDIDATOS.cmd`. No extraction semantics changed.
+
+## 1.5.7-alpha
+
+Adds read-only ReportsRT coverage diagnostics. Candidate extraction now groups the full ReportsRT table by raw Dream value, reports event counts and latest timestamps, and exposes a reportsrt-coverage summary before event/state analysis. This determines whether Romeos 13/17 are absent from TGDReports.mdb or merely missing from the recent-event sample.
