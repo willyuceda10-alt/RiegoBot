@@ -7,6 +7,7 @@ from pathlib import Path
 from . import PROJECT_ROOT, __version__
 from .bridge import invoke_readonly_bridge
 from .candidate_analysis import build_candidate_operational_state, summarize_candidate_events
+from .reports_coverage import summarize_reportsrt_coverage
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
@@ -20,7 +21,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -71,6 +72,11 @@ def main() -> int:
 
     if args.command == "candidate-operational-state":
         payload = build_candidate_operational_state(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "reportsrt-coverage":
+        payload = summarize_reportsrt_coverage(PROJECT_ROOT)
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0 if payload.get("success") else 7
 
