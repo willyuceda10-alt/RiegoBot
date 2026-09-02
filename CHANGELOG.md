@@ -99,3 +99,7 @@ Fixes the Windows DreamReader launcher whitelist so the new `candidate-operation
 ## 1.5.7-alpha
 
 Adds read-only ReportsRT coverage diagnostics. Candidate extraction now groups the full ReportsRT table by raw Dream value, reports event counts and latest timestamps, and exposes a reportsrt-coverage summary before event/state analysis. This determines whether Romeos 13/17 are absent from TGDReports.mdb or merely missing from the recent-event sample.
+
+## 1.5.8-alpha
+
+Adds a generic read-only Dream coverage scanner across all detected shared MDB databases. Candidate analysis now identifies every table with a Dream column and groups row counts by Dream value, allowing the current data sources for Romeos 11/13/17 to be located without relying on stale documentation or hardcoded assumptions.
