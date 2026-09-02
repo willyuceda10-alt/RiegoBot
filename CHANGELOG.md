@@ -47,3 +47,7 @@ Introduces the first RiegoBot query layer over normalized DreamReader session ou
 ## 1.4.1-alpha
 
 Adds freshness-aware Romeo summaries. RiegoBot now reports the latest normalized data timestamp, age in hours, FRESH/STALE status using a 24-hour safety threshold, and counts non-zero raw flow observations without interpreting them as confirmed irrigation. The summary explicitly blocks claims of current irrigation while units/semantics remain unresolved or data is stale.
+
+## 1.4.2-alpha
+
+Corrects freshness calculations for Dream timestamps that do not include timezone information. Site timezone is now explicitly configurable and defaults to `America/Lima` in the pilot configuration, so Romeo summaries preserve local Dream time instead of assuming UTC.
