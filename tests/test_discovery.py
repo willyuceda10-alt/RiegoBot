@@ -32,6 +32,23 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(by_id["13"]["status"], "DISABLED")
             self.assertEqual(by_id["21"]["status"], "DISCOVERED")
 
+    def test_many_dreams_scale_without_hardcoded_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            ids = ["11", "13", "17", "18", "21", "25", "30", "44", "101"]
+            for dream_id in ids:
+                (root / f"Dream{dream_id}_1.mdb").touch()
+
+            rows = discover_dreams(root, self._config("."))
+            by_id = {row["dreamId"]: row for row in rows}
+
+            self.assertEqual(set(by_id), set(ids))
+            self.assertEqual(by_id["11"]["status"], "CONFIGURED")
+            self.assertEqual(by_id["13"]["status"], "DISABLED")
+            for dream_id in {"17", "18", "21", "25", "30", "44", "101"}:
+                self.assertEqual(by_id[dream_id]["status"], "DISCOVERED")
+                self.assertEqual(by_id[dream_id]["dreamKey"], f"SITE99-DREAM-{dream_id}")
+
     def test_auto_detects_dream_two_ancestors_above_nested_zip(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
