@@ -181,3 +181,35 @@ function Export-RomeoSnapshot {
 
     return @($rows)
 }
+
+function Invoke-AccumulationObservationExtraction {
+    param([string]$BaseDirectory, $Config, [object[]]$Dreams, [string]$SessionDirectory, [System.Collections.Generic.List[object]]$Metrics, [string]$LogPath, [bool]$AllowCandidateMappings)
+    $mapping = Resolve-Mapping -MappingsDirectory (Join-Path $BaseDirectory 'mappings') -Entity 'AccumulationObservations' -AllowCandidateMappings $AllowCandidateMappings
+    if ($null -eq $mapping) { Write-ReaderLog $LogPath 'INFO' 'Normalizer' 'SKIPPED' 'AccumulationObservations' 'Mapping CANDIDATE deshabilitado o no disponible.'; return @() }
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'; New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databasePath = Join-Path (Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)) ([string]$mapping.sourceDatabase)
+    if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { Write-ReaderLog $LogPath 'WARN' 'AccumulationObservations' 'UNRESOLVED' ([string]$mapping.sourceDatabase) 'Accumulation database does not exist.'; return @() }
+    $opened = $null
+    try {
+        $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+        $sql = 'SELECT [Dream], [Line], [Tact_Number], [Tact_Index], [Date], [Time], [WAccum_Vol], [WAccum_Time] FROM [LastAccum]'
+        $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery ([int]$Config.runtime.maxRowsPerQuery))
+        $rows = [System.Collections.Generic.List[object]]::new()
+        foreach ($source in $sourceRows) {
+            $dream = $Dreams | Where-Object { $_.DreamId -eq [string]$source.Dream } | Select-Object -First 1
+            if ($null -eq $dream) { continue }
+            $timestamp = $null
+            if ($null -ne $source.Date -and $null -ne $source.Time) { $timestamp = ([datetime]$source.Date).Date.Add(([datetime]$source.Time).TimeOfDay).ToString('o') }
+            $rows.Add([pscustomobject]@{ CollectorId=[string]$Config.collector.collectorId; SiteId=[string]$Config.collector.siteId; DreamKey=[string]$dream.DreamKey; DreamId=[string]$dream.DreamId; Timestamp=$timestamp; LineRaw=$source.Line; TactNumberRaw=$source.Tact_Number; TactIndexRaw=$source.Tact_Index; RawVolume=$source.WAccum_Vol; RawTime=$source.WAccum_Time; VolumeUnit=$null; TimeUnit=$null; UnitStatus='UNRESOLVED'; SourceDatabase=[string]$mapping.sourceDatabase; SourceTable=[string]$mapping.sourceTable; MappingStatus=[string]$mapping.status; Confidence=[double]$mapping.confidence })
+        }
+        @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'accumulation_observations.csv') -NoTypeInformation -Encoding utf8
+        @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'accumulation_observations.json') -Encoding utf8
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' $mapping.sourceDatabase 'AccumulationObservationQuery' $opened.Provider 0 @($rows).Count $true ''
+        return @($rows)
+    } catch {
+        $message = $_.Exception.Message
+        Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' $mapping.sourceDatabase 'AccumulationObservationQuery' '' 0 0 $false $message
+        Write-ReaderLog $LogPath 'ERROR' 'AccumulationObservations' 'SHARED' $mapping.sourceDatabase $message
+        throw
+    } finally { if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() } }
+}
