@@ -35,3 +35,7 @@ Adds an explicit `extract-candidates` mode for read-only investigation of candid
 ## 1.3.8-alpha
 
 Adds per-Romeo summaries for candidate LastAccum observations, including record count, latest timestamp, and raw min/max ranges. Units remain unresolved and candidate-only. Adds a one-click updater-and-candidate-test launcher for the local Windows workflow.
+
+## 1.3.9-alpha
+
+Moves automated schema comparison summaries out of tracked documentation and into each runtime session. The updater also cleans the legacy generated change in `docs/DREAM_SCHEMA_COMPARISON.md` before pulling, keeping shared-folder Git worktrees clean.
