@@ -2,37 +2,57 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import secrets
-import socket
-from datetime import datetime
 
 from . import PROJECT_ROOT, __version__
 from .config import load_config
 from .discovery import discover_dreams
+from .runtime import write_discovery_outputs
+from .session import create_session
 from .validation import python_version_ok
-
-
-def _safe(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_-]", "_", value) or "unknown"
-
-
-def build_session_id() -> str:
-    return f"{datetime.now():%Y%m%d_%H%M%S}_{_safe(socket.gethostname())}_{_safe(__import__('getpass').getuser())}_{secrets.token_hex(3)}"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
-    parser.add_argument("command", choices=("discovery", "extract"), nargs="?", default="discovery")
+    parser.add_argument("command", choices=("discovery", "extract", "doctor"), nargs="?", default="discovery")
     args = parser.parse_args()
+
     if not python_version_ok():
         print("DreamReader requires Python 3.11 or later.")
         return 2
+
     config = load_config(PROJECT_ROOT)
-    payload = {"version": __version__, "projectRoot": str(PROJECT_ROOT), "collector": config["collector"], "sessionIdPreview": build_session_id(), "dreams": discover_dreams(PROJECT_ROOT, config)}
+
+    if args.command == "doctor":
+        payload = {
+            "version": __version__,
+            "projectRoot": str(PROJECT_ROOT),
+            "collector": config["collector"],
+            "python": "OK",
+            "portableRoot": True,
+            "readOnly": bool(config.get("readOnly", False)),
+        }
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0
+
+    session = create_session(PROJECT_ROOT, config)
+    dreams = discover_dreams(PROJECT_ROOT, config)
+    write_discovery_outputs(session.output_dir, dreams)
+
+    payload = {
+        "version": __version__,
+        "projectRoot": str(PROJECT_ROOT),
+        "collector": config["collector"],
+        "session": session.to_dict(),
+        "dreams": dreams,
+    }
+
     if args.command == "extract":
-        payload["notice"] = "MDB extraction remains on the tested PowerShell bridge in this migration phase."
-    print(json.dumps(payload, indent=2))
+        payload["notice"] = (
+            "MDB extraction remains on the tested PowerShell read-only bridge "
+            "during the Python migration phase."
+        )
+
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
 
 
