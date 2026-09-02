@@ -1,0 +1,24 @@
+{
+  "entity": "FlowObservations",
+  "status": "PROBABLE",
+  "sourceDatabase": "TGDStatistics.mdb",
+  "sourceTable": "RTWMFlow",
+  "identity": {
+    "DreamId": "Dream",
+    "MeterGroupRaw": "ObjSubType",
+    "MeterNumberRaw": "ObjNum"
+  },
+  "fieldMappings": {
+    "Timestamp": ["DateA", "TimeA"],
+    "RawValue": "ValueA"
+  },
+  "joinToWaterMeters": [
+    "Dream = Dream",
+    "ObjSubType = WM_GType",
+    "ObjNum = WM_Number"
+  ],
+  "unit": null,
+  "unitStatus": "UNRESOLVED",
+  "notes": "All observed RTWMFlow rows joined to Water_Meters using the composite Dream/group/number key. The physical unit and scaling of ValueA remain unresolved, so output is explicitly raw.",
+  "confidence": 0.8
+}
