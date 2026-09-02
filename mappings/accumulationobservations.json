@@ -1,0 +1,22 @@
+{
+  "entity": "AccumulationObservations",
+  "status": "CANDIDATE",
+  "sourceDatabase": "TGDStatistics.mdb",
+  "sourceTable": "LastAccum",
+  "identity": {
+    "DreamId": "Dream",
+    "LineRaw": "Line",
+    "TactNumberRaw": "Tact_Number",
+    "TactIndexRaw": "Tact_Index"
+  },
+  "fieldMappings": {
+    "Timestamp": ["Date", "Time"],
+    "RawVolume": "WAccum_Vol",
+    "RawTime": "WAccum_Time"
+  },
+  "volumeUnit": null,
+  "timeUnit": null,
+  "unitStatus": "UNRESOLVED",
+  "notes": "LastAccum is Dream-scoped and contains timestamped accumulation-like values. Exact units and business scope are not yet verified, so this mapping remains disabled unless candidate mappings are explicitly allowed.",
+  "confidence": 0.55
+}
