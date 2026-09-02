@@ -5,6 +5,8 @@ title RiegoBot - Actualizar desde GitHub
 set "BASE=%~dp0"
 set "BRANCH=feature/v1.3.2-python-portable"
 set "RC=0"
+set "NO_PAUSE=0"
+if /I "%~1"=="/nopause" set "NO_PAUSE=1"
 
 echo ============================================
 echo   RiegoBot - Actualizacion automatica
@@ -85,7 +87,9 @@ if errorlevel 1 (
 echo.
 echo Codigo de salida: %RC%
 echo.
-echo Presione una tecla para cerrar.
-pause >nul
+if "%NO_PAUSE%"=="0" (
+  echo Presione una tecla para cerrar.
+  pause >nul
+)
 popd >nul 2>nul
 exit /b %RC%
