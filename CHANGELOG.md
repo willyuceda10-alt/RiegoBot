@@ -43,3 +43,7 @@ Moves automated schema comparison summaries out of tracked documentation and int
 ## 1.4.0-alpha
 
 Introduces the first RiegoBot query layer over normalized DreamReader session outputs. Adds `python -m dreamreader romeo <id>` and `CONSULTAR_ROMEO.bat`, which read the latest valid normalized session without reopening Dream MDB files. Flow and accumulation units remain explicitly unresolved, and candidate status observations remain labelled as candidate data.
+
+## 1.4.1-alpha
+
+Adds freshness-aware Romeo summaries. RiegoBot now reports the latest normalized data timestamp, age in hours, FRESH/STALE status using a 24-hour safety threshold, and counts non-zero raw flow observations without interpreting them as confirmed irrigation. The summary explicitly blocks claims of current irrigation while units/semantics remain unresolved or data is stale.
