@@ -1,5 +1,5 @@
 {
-  "version": "1.4.0-alpha",
+  "version": "1.4.1-alpha",
   "readOnly": true,
   "collector": {
     "collectorId": "COLLECTOR-LOCAL-01",
