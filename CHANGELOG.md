@@ -103,3 +103,7 @@ Adds read-only ReportsRT coverage diagnostics. Candidate extraction now groups t
 ## 1.5.8-alpha
 
 Adds a generic read-only Dream coverage scanner across all detected shared MDB databases. Candidate analysis now identifies every table with a Dream column and groups row counts by Dream value, allowing the current data sources for Romeos 11/13/17 to be located without relying on stale documentation or hardcoded assumptions.
+
+## 1.5.9-alpha
+
+Adds read-only investigation of TGDReports.mdb/Reports for all configured Romeos. The candidate analyzer compares recent historical report codes, valve open/close transitions (29/30), failure flags, IDs, and timestamps for Romeos 11/13/17 while keeping Reports distinct from ReportsRT and making no realtime-state claim.
