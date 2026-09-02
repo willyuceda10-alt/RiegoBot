@@ -23,6 +23,21 @@ def _as_list(value: Any) -> list[dict[str, Any]]:
 
 
 def find_latest_valid_session(project_root: Path) -> Path | None:
+    status_path = project_root / "runtime" / "collector_status.json"
+    if status_path.exists():
+        try:
+            status = _read_json(status_path)
+            latest_raw = status.get("latestSession")
+            if status.get("success") and latest_raw:
+                latest = Path(str(latest_raw))
+                session_file = latest / "session.json"
+                if session_file.exists():
+                    summary = _read_json(session_file)
+                    if not summary.get("Errors") and int(summary.get("DreamsDiscovered") or 0) > 0:
+                        return latest
+        except (OSError, json.JSONDecodeError, ValueError):
+            pass
+
     output_root = project_root / "output"
     if not output_root.exists():
         return None
