@@ -50,12 +50,22 @@ if ($null -eq $python) { $python = Get-Command py -ErrorAction SilentlyContinue 
 if ($null -ne $python) {
   try {
     & (Join-Path $BaseDirectory 'scripts\TEST_MULTIUSER.ps1') -BaseDirectory $BaseDirectory | Out-Host
-    $checks.Add([pscustomobject]@{ Check='TEST_MULTIUSER'; Passed=($LASTEXITCODE -eq 0); Details="ExitCode=$LASTEXITCODE" })
+    $multiExit = $LASTEXITCODE
+    $checks.Add([pscustomobject]@{ Check='TEST_MULTIUSER'; Passed=($multiExit -eq 0); Details="ExitCode=$multiExit" })
   } catch {
     $checks.Add([pscustomobject]@{ Check='TEST_MULTIUSER'; Passed=$false; Details=$_.Exception.Message })
   }
+
+  try {
+    & (Join-Path $BaseDirectory 'scripts\RUN_PYTHON_TESTS.ps1') -BaseDirectory $BaseDirectory | Out-Host
+    $testExit = $LASTEXITCODE
+    $checks.Add([pscustomobject]@{ Check='PYTHON_UNIT_TESTS'; Passed=($testExit -eq 0); Details="ExitCode=$testExit" })
+  } catch {
+    $checks.Add([pscustomobject]@{ Check='PYTHON_UNIT_TESTS'; Passed=$false; Details=$_.Exception.Message })
+  }
 } else {
   $checks.Add([pscustomobject]@{ Check='TEST_MULTIUSER'; Passed=$false; Details='Python 3.11+ not found.' })
+  $checks.Add([pscustomobject]@{ Check='PYTHON_UNIT_TESTS'; Passed=$false; Details='Python 3.11+ not found.' })
 }
 
 $latest = Get-ChildItem -LiteralPath (Join-Path $BaseDirectory 'output') -Recurse -Filter 'session.json' -File -ErrorAction SilentlyContinue |
