@@ -1,4 +1,4 @@
-# RiegoBot / DreamReader 1.3.4-alpha
+# RiegoBot / DreamReader 1.6.0-alpha
 
 DreamReader es el núcleo técnico de RiegoBot para descubrir y leer múltiples controladores Dream en modo solo lectura.
 
@@ -11,6 +11,8 @@ Un Collector administra N Dreams.
 - `DreamKey`: identidad estable `${SiteId}-DREAM-${DreamId}`.
 
 El discovery detecta archivos `Dream*_1.mdb` de forma dinámica y no requiere lógica específica para 11, 13 o 17.
+
+La lista `dreams` de la configuración no limita los controladores soportados: se usa para nombres, habilitación y excepciones conocidas. Cualquier `Dream<N>_1.mdb` adicional se incorpora como `DISCOVERED` sin modificar código. El objetivo de arquitectura es 1 Collector -> N Dreams y, posteriormente, N Collectors -> plataforma central.
 
 ## Ejecución
 
