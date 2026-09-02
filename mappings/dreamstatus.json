@@ -1,0 +1,16 @@
+{
+  "entity": "DreamStatus",
+  "status": "CANDIDATE",
+  "sourceDatabase": "TGDReports.mdb",
+  "sourceTable": "ReportsRT",
+  "dreamIdentityColumn": "Dream",
+  "fieldMappings": {
+    "Timestamp": ["RepDate", "RepTime"],
+    "ReportCode": "RepCode",
+    "ReportText": "RepCodeStr",
+    "SourceStateRaw": "State"
+  },
+  "filters": {"oneLatestRecordPerDream": true},
+  "notes": "ReportsRT records are evidenced as Dream-scoped reports/events. The semantic meaning of State and whether this represents general Dream health are not confirmed.",
+  "confidence": 0.45
+}
