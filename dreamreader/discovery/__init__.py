@@ -24,16 +24,24 @@ def _candidate_roots(project_root: Path, configured_path: str) -> list[tuple[str
     )
     candidates.append(("config", configured_resolved))
 
-    # Portable fallbacks relative to the project location. These avoid
-    # user-specific absolute paths and cover common extracted-folder layouts.
-    parent = project_root.parent
-    fallbacks = [
-        ("auto:project/Dream", project_root / "Dream"),
-        ("auto:sibling/Dream", parent / "Dream"),
-        ("auto:sibling/Dream_Realtime/Dream", parent / "Dream_Realtime" / "Dream"),
-        ("auto:sibling/Dream_Realtime", parent / "Dream_Realtime"),
-    ]
-    candidates.extend(fallbacks)
+    # Check the project and nearby ancestor layouts. This remains portable:
+    # all candidates are derived from the project location, never a username.
+    current = project_root
+    for depth in range(0, 4):
+        label = "project" if depth == 0 else f"ancestor{depth}"
+        candidates.extend(
+            [
+                (f"auto:{label}/Dream", current / "Dream"),
+                (
+                    f"auto:{label}/Dream_Realtime/Dream",
+                    current / "Dream_Realtime" / "Dream",
+                ),
+                (f"auto:{label}/Dream_Realtime", current / "Dream_Realtime"),
+            ]
+        )
+        if current.parent == current:
+            break
+        current = current.parent
 
     seen: set[str] = set()
     unique: list[tuple[str, Path]] = []
@@ -52,10 +60,8 @@ def resolve_discovery_root(
 ) -> tuple[str, Path]:
     configured_path = config["discovery"]["rootPath"]
     pattern = config["discovery"]["dreamPattern"]
-
     candidates = _candidate_roots(project_root, configured_path)
 
-    # Prefer a folder that actually contains Dream databases.
     for source, root in candidates:
         if root.is_dir() and any(
             item.is_file() and fnmatch.fnmatch(item.name.lower(), pattern.lower())
@@ -63,13 +69,10 @@ def resolve_discovery_root(
         ):
             return source, root
 
-    # If no candidate contains matches, still prefer an existing configured or
-    # environment directory so diagnostics can distinguish empty vs missing.
     for source, root in candidates:
         if source in {"environment", "config"} and root.is_dir():
             return source, root
 
-    # Fall back to configured path for a deterministic diagnostic.
     for source, root in candidates:
         if source == "config":
             return source, root
