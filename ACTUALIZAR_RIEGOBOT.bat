@@ -36,6 +36,10 @@ if not exist ".git" (
   goto :END
 )
 
+if exist "docs\DREAM_SCHEMA_COMPARISON.md" (
+  git restore -- "docs/DREAM_SCHEMA_COMPARISON.md" >nul 2>nul
+)
+
 echo Verificando cambios remotos...
 git fetch origin
 if errorlevel 1 (
