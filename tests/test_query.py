@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from dreamreader.query import build_romeo_query, find_latest_valid_session
+from dreamreader.query import _parse_timestamp, build_romeo_query, find_latest_valid_session
 
 
 class QueryTests(unittest.TestCase):
@@ -40,6 +40,12 @@ class QueryTests(unittest.TestCase):
             self.assertTrue(payload["success"])
             self.assertEqual(payload["meterCount"], 1)
             self.assertEqual(payload["meters"][0]["MeterId"], "22:2")
+
+    def test_naive_dream_timestamp_uses_site_timezone(self) -> None:
+        parsed = _parse_timestamp("2026-08-26T12:21:01.0000000", "America/Lima")
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.utcoffset().total_seconds(), -5 * 3600)
+        self.assertEqual(parsed.isoformat(), "2026-08-26T12:21:01-05:00")
 
 
 if __name__ == "__main__":
