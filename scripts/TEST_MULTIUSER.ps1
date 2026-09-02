@@ -15,9 +15,11 @@ print("COUNT=" + str(len(values)))
 print("UNIQUE=" + str(len(set(values))))
 '@
 
+$launcherName = [IO.Path]::GetFileNameWithoutExtension($python.Source).ToLowerInvariant()
+
 Push-Location $BaseDirectory
 try {
-    if ($python.Name -like 'py*') { $result = $command | & $python.Source -3 - }
+    if ($launcherName -eq 'py') { $result = $command | & $python.Source -3 - }
     else { $result = $command | & $python.Source - }
     if ($LASTEXITCODE -ne 0) { throw 'Python multiuser test failed.' }
     $result | ForEach-Object { Write-Host $_ }
