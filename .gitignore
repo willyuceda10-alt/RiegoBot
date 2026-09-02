@@ -10,6 +10,7 @@ output/*
 logs/*
 !logs/.gitkeep
 validation_report.json
+portability_report.json
 *.zip
 
 # Local configuration
