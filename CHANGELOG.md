@@ -23,3 +23,7 @@ Adds Python orchestration of the existing read-only PowerShell MDB bridge throug
 ## 1.3.5-alpha
 
 Adds evidence-backed latest raw RTWMFlow observations per water meter. Flow values remain explicitly unscaled and unit-unresolved. Adds a candidate LastAccum mapping without enabling accumulation extraction by default.
+
+## 1.3.6-alpha
+
+Adds a consolidated `romeo_snapshot.json/csv` built from validated WaterMeters and latest raw FlowObservations. Snapshot values remain raw and flow units stay explicitly unresolved. Runtime config version is aligned with the executable version.
