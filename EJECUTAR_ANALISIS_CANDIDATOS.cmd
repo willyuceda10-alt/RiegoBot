@@ -10,6 +10,13 @@ call "%~dp0EJECUTAR_DREAMREADER.cmd" shared-dream-coverage /nopause
 if errorlevel 1 exit /b %ERRORLEVEL%
 echo.
 echo ============================================
+echo   Analisis historico Reports
+echo ============================================
+echo.
+call "%~dp0EJECUTAR_DREAMREADER.cmd" reports-history-summary /nopause
+if errorlevel 1 exit /b %ERRORLEVEL%
+echo.
+echo ============================================
 echo   Cobertura de eventos ReportsRT
 echo ============================================
 echo.
