@@ -1,5 +1,5 @@
 {
-  "version": "1.4.6-alpha",
+  "version": "1.5.0-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -25,5 +25,11 @@
   },
   "extractionMode": "DISCOVERY",
   "allowCandidateMappings": false,
-  "dreams": []
+  "dreams": [],
+  "realtime": {
+    "enabled": true,
+    "pollIntervalSeconds": 30,
+    "allowCandidateMappings": false,
+    "maxConsecutiveFailures": 10
+  }
 }
