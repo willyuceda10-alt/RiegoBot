@@ -216,11 +216,19 @@ function Invoke-DreamReader {
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
     $normalizedRows = @(); $waterMeterRows = @()
     if ($ExtractionMode -eq 'NORMALIZED') {
+        . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
+
         try {
-            . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
             $normalizedRows = @(Invoke-NormalizedExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("DreamStatus extraction: $($_.Exception.Message)")
+        }
+
+        try {
             $waterMeterRows = @(Invoke-WaterMeterExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
-        } catch { $errors.Add("Normalized extraction: $($_.Exception.Message)") }
+        } catch {
+            $errors.Add("WaterMeters extraction: $($_.Exception.Message)")
+        }
     }
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
     $ended = Get-Date
