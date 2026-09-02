@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from typing import Any
 
 
@@ -98,7 +99,7 @@ def build_romeo_query(project_root: Path, romeo_id: str) -> dict[str, Any]:
     }
 
 
-def _parse_timestamp(value: Any) -> datetime | None:
+def _parse_timestamp(value: Any, site_timezone: str = "UTC") -> datetime | None:
     if value is None:
         return None
     text = str(value).strip()
@@ -109,18 +110,29 @@ def _parse_timestamp(value: Any) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        try:
+            parsed = parsed.replace(tzinfo=ZoneInfo(site_timezone))
+        except ZoneInfoNotFoundError:
+            parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed
 
 
-def build_romeo_summary(project_root: Path, romeo_id: str, stale_after_hours: float = 24.0) -> dict[str, Any]:
+def build_romeo_summary(
+    project_root: Path,
+    romeo_id: str,
+    stale_after_hours: float = 24.0,
+    site_timezone: str = "UTC",
+) -> dict[str, Any]:
     payload = build_romeo_query(project_root, romeo_id)
     if not payload.get("success"):
         return payload
 
     meters = list(payload.get("meters") or [])
     timestamps = [
-        ts for ts in (_parse_timestamp(row.get("FlowTimestamp") or row.get("MeterTimestamp")) for row in meters)
+        ts for ts in (
+            _parse_timestamp(row.get("FlowTimestamp") or row.get("MeterTimestamp"), site_timezone)
+            for row in meters
+        )
         if ts is not None
     ]
     latest = max(timestamps) if timestamps else None
@@ -142,6 +154,7 @@ def build_romeo_summary(project_root: Path, romeo_id: str, stale_after_hours: fl
         "romeoKey": payload.get("romeoKey"),
         "sessionId": payload.get("sessionId"),
         "sessionEndTime": payload.get("sessionEndTime"),
+        "siteTimezone": site_timezone,
         "latestDataTimestamp": latest.isoformat() if latest else None,
         "dataAgeHours": round(age_hours, 2) if age_hours is not None else None,
         "freshnessStatus": "STALE" if is_stale else "FRESH",
