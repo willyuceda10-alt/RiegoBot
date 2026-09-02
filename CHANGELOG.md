@@ -55,3 +55,7 @@ Corrects freshness calculations for Dream timestamps that do not include timezon
 ## 1.4.3-alpha
 
 Adds an operator-friendly RiegoBot response layer. The new `romeo-message` command and `PREGUNTAR_RIEGOBOT.bat` summarize freshness, meter counts, and non-zero raw flow observations in Spanish while preserving safety guards: stale data cannot be presented as current irrigation, and unresolved flow units are never converted into physical caudal claims.
+
+## 1.4.4-alpha
+
+Adds a local natural-language command parser for operator questions. RiegoBot can now identify Romeo/Dream/controlador numbers from phrases such as `que pasa con el Romeo 11`, `estado Dream 13`, `caudal del controlador 17`, and classify basic intents (status, flow, irrigation, alarm) without external AI services. The new `RIEGOBOT_PREGUNTA.bat` provides a one-click interactive test.
