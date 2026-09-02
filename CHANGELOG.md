@@ -31,3 +31,7 @@ Adds a consolidated `romeo_snapshot.json/csv` built from validated WaterMeters a
 ## 1.3.7-alpha
 
 Adds an explicit `extract-candidates` mode for read-only investigation of candidate mappings. LastAccum can now be exported as raw accumulation observations with unresolved volume/time units. Normal `extract` keeps candidate mappings disabled.
+
+## 1.3.8-alpha
+
+Adds per-Romeo summaries for candidate LastAccum observations, including record count, latest timestamp, and raw min/max ranges. Units remain unresolved and candidate-only. Adds a one-click updater-and-candidate-test launcher for the local Windows workflow.
