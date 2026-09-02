@@ -27,3 +27,7 @@ Adds evidence-backed latest raw RTWMFlow observations per water meter. Flow valu
 ## 1.3.6-alpha
 
 Adds a consolidated `romeo_snapshot.json/csv` built from validated WaterMeters and latest raw FlowObservations. Snapshot values remain raw and flow units stay explicitly unresolved. Runtime config version is aligned with the executable version.
+
+## 1.3.7-alpha
+
+Adds an explicit `extract-candidates` mode for read-only investigation of candidate mappings. LastAccum can now be exported as raw accumulation observations with unresolved volume/time units. Normal `extract` keeps candidate mappings disabled.
