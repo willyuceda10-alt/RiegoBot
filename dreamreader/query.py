@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -214,4 +215,56 @@ def build_operator_message(project_root: Path, romeo_id: str, site_timezone: str
             "flowUnitStatus": "UNRESOLVED",
             "canClaimCurrentIrrigation": False,
         },
+    }
+
+
+def parse_operator_question(text: str) -> dict[str, Any]:
+    normalized = " ".join(str(text or "").strip().split())
+    if not normalized:
+        return {"success": False, "error": "La pregunta esta vacia."}
+
+    match = re.search(r"\b(?:romeo|dream|controlador)\s*[-:#]?\s*(\d+)\b", normalized, flags=re.IGNORECASE)
+    if match is None:
+        if normalized.isdigit():
+            return {"success": True, "romeoId": normalized, "intent": "romeo_status"}
+        return {
+            "success": False,
+            "error": "No pude identificar el numero de Romeo. Ejemplo: que pasa con el Romeo 11",
+        }
+
+    lower = normalized.lower()
+    if any(word in lower for word in ("caudal", "flujo")):
+        intent = "flow_status"
+    elif any(word in lower for word in ("riega", "regando", "riego")):
+        intent = "irrigation_status"
+    elif any(word in lower for word in ("alarma", "alerta")):
+        intent = "alarm_status"
+    else:
+        intent = "romeo_status"
+
+    return {
+        "success": True,
+        "romeoId": match.group(1),
+        "intent": intent,
+        "originalQuestion": normalized,
+    }
+
+
+def answer_operator_question(project_root: Path, text: str, site_timezone: str = "UTC") -> dict[str, Any]:
+    parsed = parse_operator_question(text)
+    if not parsed.get("success"):
+        return parsed
+
+    romeo_id = str(parsed["romeoId"])
+    response = build_operator_message(project_root, romeo_id, site_timezone=site_timezone)
+    if not response.get("success"):
+        return response
+
+    return {
+        "success": True,
+        "intent": parsed.get("intent"),
+        "romeoId": romeo_id,
+        "question": parsed.get("originalQuestion", text),
+        "message": response.get("message"),
+        "details": response.get("details"),
     }
