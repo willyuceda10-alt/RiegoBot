@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 title RiegoBot - DreamReader
 set "BASE=%~dp0"
 set "RC=0"
@@ -38,7 +38,7 @@ if not errorlevel 1 (
   echo Ejecutando %COMMAND%...
   echo.
   python -m dreamreader %COMMAND%
-  set "RC=%ERRORLEVEL%"
+  set "RC=!ERRORLEVEL!"
   goto :AFTER_RUN
 )
 
