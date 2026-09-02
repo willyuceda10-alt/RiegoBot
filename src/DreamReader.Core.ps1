@@ -214,7 +214,7 @@ function Invoke-DreamReader {
     $columns | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_columns.csv') -NoTypeInformation -Encoding utf8
     $comparison = @(Get-SchemaComparison $columns); $comparison | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_comparison.csv') -NoTypeInformation -Encoding utf8
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
-    $normalizedRows = @(); $waterMeterRows = @(); $flowObservationRows = @(); $romeoSnapshotRows = @(); $accumulationRows = @(); $accumulationSummaryRows = @()
+    $normalizedRows = @(); $waterMeterRows = @(); $flowObservationRows = @(); $romeoSnapshotRows = @(); $accumulationRows = @(); $accumulationSummaryRows = @(); $operationalEventRows = @()
     if ($ExtractionMode -eq 'NORMALIZED') {
         . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
 
@@ -250,10 +250,16 @@ function Invoke-DreamReader {
         } catch {
             $errors.Add("AccumulationObservations extraction: $($_.Exception.Message)")
         }
+
+        try {
+            $operationalEventRows = @(Invoke-OperationalEventInvestigation -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("OperationalEvents investigation: $($_.Exception.Message)")
+        }
     }
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
     $ended = Get-Date
-    $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count; FlowObservations=$flowObservationRows.Count; RomeoSnapshot=$romeoSnapshotRows.Count; AccumulationObservations=$accumulationRows.Count; AccumulationSummary=$accumulationSummaryRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
+    $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count; FlowObservations=$flowObservationRows.Count; RomeoSnapshot=$romeoSnapshotRows.Count; AccumulationObservations=$accumulationRows.Count; AccumulationSummary=$accumulationSummaryRows.Count; OperationalEventsCandidate=$operationalEventRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
     $session | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionDir 'session.json') -Encoding utf8
     $comparisonSummary = "## Automated comparison results`n`nSession: $sessionId`n`nRows generated: $($comparison.Count). This section is produced from actual schema discovery; databases that could not be opened are represented by the session errors, not guessed.`n"
     Set-Content -LiteralPath (Join-Path $sessionDir 'schema_comparison_summary.md') -Value $comparisonSummary -Encoding utf8
