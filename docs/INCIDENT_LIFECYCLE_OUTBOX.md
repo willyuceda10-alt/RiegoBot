@@ -19,9 +19,12 @@ Moving an incident into validation/resolution requires the configured evidence p
 
 Current candidate policy:
 
-- observation required
-- photo evidence required
+- observation required by default
+- photo evidence is **not required by default**
+- photo evidence can be required per incident type
 - validation required before `RESOLVED`
+
+During local development this policy comes from configuration. In production, Azure will be the central policy authority so administrators can decide which incident types require a photo without changing DreamReader code.
 
 Photo bytes are not stored in the operational database. The `incident_evidence` table stores metadata and a secure storage reference. In Azure this will point to Azure Blob Storage.
 
