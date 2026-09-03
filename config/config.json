@@ -1,5 +1,5 @@
 {
-  "version": "1.7.4-alpha",
+  "version": "1.8.0-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -61,5 +61,15 @@
     "requireObservation": true,
     "episodeGapMinutes": 30,
     "slaPreviewReminders": 5
+  },
+  "routing": {
+    "mode": "candidate",
+    "requiredRoles": [
+      "REGADOR",
+      "SUPERVISOR",
+      "COORDINADOR"
+    ],
+    "users": [],
+    "assignments": []
   }
 }
