@@ -119,3 +119,7 @@ Adds a candidate multi-Romeo irrigation-state investigation. DreamReader now sel
 ## 1.6.2-alpha
 
 Fixes the candidate irrigation-state workflow. The core extraction now invokes the multi-Romeo irrigation-state source investigation and includes its count in the session summary. The Windows candidate-analysis launcher no longer pauses before the irrigation-state phase, so the final multi-Romeo state reconstruction runs automatically.
+
+## 1.6.3-alpha
+
+Refines irrigation-state reconstruction around the current program cycle. Valve transitions are now considered only after the latest START event and, when available, only for the same raw program identifier. A latest STOP/FINISH event clears prior valve openings from the candidate current state. The analyzer emits IRRIGATING_CANDIDATE, NOT_IRRIGATING_CANDIDATE, STARTED_WITHOUT_OPEN_VALVE_EVIDENCE, or UNKNOWN while still blocking production claims until validated against Dream UI/state.
