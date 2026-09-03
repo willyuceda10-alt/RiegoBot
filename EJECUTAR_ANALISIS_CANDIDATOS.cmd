@@ -47,6 +47,15 @@ call :RUN_STAGE "Persistencia durable de incidencias" incident-sync-candidate
 if not "!RC!"=="0" goto :END
 
 call :RUN_STAGE "Resumen de incidencias persistidas" incident-store-summary
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Contrato de ciclo de vida de incidencias" incident-lifecycle-contract
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Sincronizacion de outbox de notificaciones" incident-outbox-sync
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Resumen de outbox de notificaciones" incident-outbox-summary
 
 :END
 echo.
