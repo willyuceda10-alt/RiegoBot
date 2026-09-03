@@ -24,7 +24,7 @@ Lifecycle:
 
 If the assigned irrigator does not respond or resolve the incident within the configured SLA, RiegoBot must resend WhatsApp alerts repeatedly and escalate to supervisor/coordinator according to policy. Acknowledgement alone does not close an incident.
 
-The irrigator can respond through WhatsApp with an observation and photo. Evidence is stored centrally and must be visible from the monitoring center.
+The irrigator can respond through WhatsApp with an observation and, when the incident policy requires it, a photo. Photo evidence is optional by default and configurable per incident type. In production, Azure will be the central authority for these evidence policies. Evidence is stored centrally and must be visible from the monitoring center.
 
 Closure can require both:
 - human evidence/confirmation;
