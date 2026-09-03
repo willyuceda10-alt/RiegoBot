@@ -123,3 +123,7 @@ Fixes the candidate irrigation-state workflow. The core extraction now invokes t
 ## 1.6.3-alpha
 
 Refines irrigation-state reconstruction around the current program cycle. Valve transitions are now considered only after the latest START event and, when available, only for the same raw program identifier. A latest STOP/FINISH event clears prior valve openings from the candidate current state. The analyzer emits IRRIGATING_CANDIDATE, NOT_IRRIGATING_CANDIDATE, STARTED_WITHOUT_OPEN_VALVE_EVIDENCE, or UNKNOWN while still blocking production claims until validated against Dream UI/state.
+
+## 1.6.4-alpha
+
+Adds a second candidate corroboration layer for irrigation state. The current-cycle result is compared with fresh raw flow presence from the same normalized session. This yields CORROBORATED_CANDIDATE, CONFLICTING_EVIDENCE, or UNRESOLVED per Romeo while keeping flow units unresolved and current-irrigation production claims disabled.
