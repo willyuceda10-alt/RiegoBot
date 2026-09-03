@@ -1,74 +1,63 @@
 @echo off
-call "%~dp0EJECUTAR_DREAMREADER.cmd" extract-candidates /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Cobertura Dream en bases compartidas
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" shared-dream-coverage /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Analisis historico Reports
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" reports-history-summary /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Cobertura de eventos ReportsRT
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" reportsrt-coverage /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Resumen de eventos operativos candidatos
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" candidate-events-summary /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Estado operativo candidato
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" candidate-operational-state /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
+setlocal EnableDelayedExpansion
+title RiegoBot - Analisis de candidatos
+set "RC=0"
+set "FAILED_STAGE="
 
-echo.
-echo ============================================
-echo   Estado de riego candidato
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-state-candidate /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Corroboracion de estado de riego
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-confidence-candidate /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Fuentes candidatas mas frescas
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" freshness-sources /nopause
-if errorlevel 1 exit /b %ERRORLEVEL%
-echo.
-echo ============================================
-echo   Motor de incidencias candidato
-echo ============================================
-echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" incident-candidates /nopause
+call :RUN_STAGE "Extraccion de candidatos" extract-candidates
+if not "!RC!"=="0" goto :END
 
+call :RUN_STAGE "Cobertura Dream en bases compartidas" shared-dream-coverage
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Analisis historico Reports" reports-history-summary
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Cobertura de eventos ReportsRT" reportsrt-coverage
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Resumen de eventos operativos candidatos" candidate-events-summary
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Estado operativo candidato" candidate-operational-state
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Estado de riego candidato" irrigation-state-candidate
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Corroboracion de estado de riego" irrigation-confidence-candidate
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Fuentes candidatas mas frescas" freshness-sources
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Motor de incidencias candidato" incident-candidates
+
+:END
 echo.
 echo ============================================
-echo   Analisis completado
+if "!RC!"=="0" (
+  echo   Analisis completado correctamente
+) else (
+  echo   Analisis detenido por error
+  echo   Etapa: !FAILED_STAGE!
+  echo   Codigo: !RC!
+)
 echo ============================================
 echo.
 echo Presione una tecla para cerrar esta ventana.
 pause >nul
+exit /b !RC!
+
+:RUN_STAGE
+set "STAGE=%~1"
+set "COMMAND=%~2"
+echo.
+echo ============================================
+echo   !STAGE!
+echo ============================================
+echo.
+call "%~dp0EJECUTAR_DREAMREADER.cmd" !COMMAND! /nopause
+set "RC=!ERRORLEVEL!"
+if not "!RC!"=="0" set "FAILED_STAGE=!STAGE!"
+exit /b 0
