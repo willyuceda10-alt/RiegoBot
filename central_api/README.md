@@ -74,3 +74,24 @@ uvicorn app.main:app --app-dir central_api --host 127.0.0.1 --port 8080
 - Fabric / Power BI: realtime monitoring and KPI consumption
 
 Authentication, private networking, managed identity and production WhatsApp delivery are intentionally not enabled in this first cloud scaffold.
+
+## Collector authentication
+
+The ingest endpoint requires:
+
+- X-RiegoBot-Collector-Id
+- X-RiegoBot-Collector-Key
+
+The API reads the authorized map from the RIEGOBOT_COLLECTOR_KEYS_JSON environment variable, for example a JSON object mapping collector IDs to secrets. Do not commit collector keys to Git.
+
+For the Windows Collector, set RIEGOBOT_COLLECTOR_API_KEY in the authorized Windows account environment. The collector config stores only the environment-variable name.
+
+In Azure, the central secret value will be injected from Key Vault / Container Apps secrets. This pilot shared-secret boundary is designed to be replaced later by stronger Entra/certificate authentication without changing the incident payload contract.
+
+## Collector push
+
+DreamReader exposes:
+
+EJECUTAR_DREAMREADER.cmd central-push
+
+The command is blocked unless azureCentral.enabled=true, apiBaseUrl is configured, and the collector API-key environment variable exists. HTTPS is mandatory except explicit localhost development mode.
