@@ -17,6 +17,7 @@ from .incidents import build_incident_candidates
 from .incident_workflow import build_incident_episodes, build_incident_sla_plan
 from .routing import build_incident_routing_candidate
 from .incident_store import sync_incident_store_candidate, incident_store_summary
+from .incident_lifecycle import lifecycle_contract, sync_notification_outbox_candidate, notification_outbox_summary
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
@@ -30,7 +31,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "incident-episodes", "incident-sla-plan", "incident-routing-candidate", "incident-sync-candidate", "incident-store-summary", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "incident-episodes", "incident-sla-plan", "incident-routing-candidate", "incident-sync-candidate", "incident-store-summary", "incident-lifecycle-contract", "incident-outbox-sync", "incident-outbox-summary", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -141,6 +142,21 @@ def main() -> int:
 
     if args.command == "incident-store-summary":
         payload = incident_store_summary(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-lifecycle-contract":
+        payload = lifecycle_contract()
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-outbox-sync":
+        payload = sync_notification_outbox_candidate(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-outbox-summary":
+        payload = notification_outbox_summary(PROJECT_ROOT)
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0 if payload.get("success") else 7
 
