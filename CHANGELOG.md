@@ -143,3 +143,7 @@ Adds a read-only freshness-source investigation across discovered Dream and shar
 ## 1.6.8-alpha
 
 Separates test-data validity from production freshness. The pilot configuration can accept stale Dream evidence for logic validation while still blocking any claim that it is current production state. Adds allowStaleForTesting and emits TEST_DATA_ACCEPTED plus usableForLogicValidation/testingModeAccepted flags.
+
+## 1.7.0-alpha
+
+Introduces the first multi-Romeo candidate incident engine. Historical Dream report events are deterministically classified into incident candidates for high flow, low flow, RTU communication errors, missing fertigation flow and other failure events. Each candidate receives a stable incident ID, severity, SLA/reminder/escalation policy, evidence requirements and the agreed incident lifecycle. WhatsApp and production incident creation remain disabled in candidate mode.
