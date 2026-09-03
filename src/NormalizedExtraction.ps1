@@ -726,3 +726,119 @@ function Invoke-IrrigationStateCandidateInvestigation {
         if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
     }
 }
+
+
+function Invoke-FreshnessSourceInvestigation {
+    param(
+        [string]$BaseDirectory,
+        $Config,
+        [object[]]$Dreams,
+        [string]$SessionDirectory,
+        [System.Collections.Generic.List[object]]$Metrics,
+        [string]$LogPath,
+        [bool]$AllowCandidateMappings
+    )
+
+    if (-not $AllowCandidateMappings) { return @() }
+
+    $schemaPath = Join-Path $SessionDirectory 'schema_columns.csv'
+    if (-not (Test-Path -LiteralPath $schemaPath -PathType Leaf)) { return @() }
+
+    $schema = @(Import-Csv -LiteralPath $schemaPath)
+    $root = Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)
+    $rows = [System.Collections.Generic.List[object]]::new()
+
+    $databaseGroups = @($schema | Group-Object DreamKey, Database)
+    foreach ($group in $databaseGroups) {
+        $parts = $group.Name -split ', ', 2
+        $dreamKey = [string]$parts[0]
+        $databaseName = [string]$parts[1]
+
+        $databasePath = $null
+        $dreamIdFromFile = $null
+        if ($dreamKey -eq 'SHARED') {
+            $databasePath = Join-Path $root $databaseName
+        } else {
+            $dream = @($Dreams | Where-Object { [string]$_.DreamKey -eq $dreamKey }) | Select-Object -First 1
+            if ($null -eq $dream) { continue }
+            $databasePath = [string]$dream.DatabasePath
+            $dreamIdFromFile = [string]$dream.DreamId
+        }
+        if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { continue }
+
+        $opened = $null
+        try {
+            $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+            foreach ($tableGroup in @($group.Group | Group-Object TableName)) {
+                $tableName = [string]$tableGroup.Name
+                if ([string]::IsNullOrWhiteSpace($tableName) -or $tableName -match '^MSys') { continue }
+
+                $columns = @($tableGroup.Group | Select-Object -ExpandProperty ColumnName -Unique)
+                $dateColumn = @($columns | Where-Object { $_ -match '^(RepDate|DateA|Date|StartDate|EndDate)$' }) | Select-Object -First 1
+                $timeColumn = @($columns | Where-Object { $_ -match '^(RepTime|TimeA|Time|StartTime|EndTime)$' }) | Select-Object -First 1
+                if ([string]::IsNullOrWhiteSpace([string]$dateColumn)) { continue }
+
+                $hasDream = $columns -contains 'Dream'
+                $targets = @()
+                if ($hasDream) {
+                    $targets = @($Dreams | Where-Object { $_.FileExists -and $_.Status -in @('CONFIGURED','DISCOVERED') } | ForEach-Object { [string]$_.DreamId })
+                } elseif ($dreamKey -ne 'SHARED' -and -not [string]::IsNullOrWhiteSpace($dreamIdFromFile)) {
+                    $targets = @($dreamIdFromFile)
+                } else {
+                    $targets = @('')
+                }
+
+                foreach ($targetDream in $targets) {
+                    $where = ''
+                    if ($hasDream -and $targetDream -match '^[0-9]+$') { $where = " WHERE [Dream] = $targetDream" }
+                    $selectCols = "[$dateColumn]"
+                    $orderCols = "[$dateColumn] DESC"
+                    if (-not [string]::IsNullOrWhiteSpace([string]$timeColumn)) {
+                        $selectCols += ", [$timeColumn]"
+                        $orderCols += ", [$timeColumn] DESC"
+                    }
+                    if ($hasDream) { $selectCols = "[Dream], " + $selectCols }
+
+                    $sql = "SELECT TOP 1 $selectCols FROM [$tableName]$where ORDER BY $orderCols"
+                    try {
+                        $candidate = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 1)
+                        if ($candidate.Count -eq 0) { continue }
+                        $source = $candidate[0]
+                        $timestamp = $null
+                        if ($null -ne $source.$dateColumn) {
+                            $datePart = [datetime]$source.$dateColumn
+                            if (-not [string]::IsNullOrWhiteSpace([string]$timeColumn) -and $null -ne $source.$timeColumn) {
+                                $timePart = [datetime]$source.$timeColumn
+                                $timestamp = $datePart.Date.Add($timePart.TimeOfDay).ToString('o')
+                            } else {
+                                $timestamp = $datePart.ToString('o')
+                            }
+                        }
+                        $romeoId = if ($hasDream) { [string]$source.Dream } elseif ($targetDream) { [string]$targetDream } else { $null }
+                        $rows.Add([pscustomobject]@{
+                            RomeoId = $romeoId
+                            DreamKey = $dreamKey
+                            Database = $databaseName
+                            TableName = $tableName
+                            DateColumn = [string]$dateColumn
+                            TimeColumn = [string]$timeColumn
+                            LatestTimestamp = $timestamp
+                            HasDreamColumn = [bool]$hasDream
+                            MappingStatus = 'CANDIDATE'
+                        })
+                    } catch {
+                        Write-ReaderLog $LogPath 'INFO' 'FreshnessSource' $dreamKey $databaseName ("Skipped $tableName: " + $_.Exception.Message)
+                    }
+                }
+            }
+        } finally {
+            if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
+        }
+    }
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    @($rows) | Sort-Object LatestTimestamp -Descending | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'freshness_sources_candidate.csv') -NoTypeInformation -Encoding utf8
+    @($rows) | Sort-Object LatestTimestamp -Descending | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'freshness_sources_candidate.json') -Encoding utf8
+    return @($rows)
+}
