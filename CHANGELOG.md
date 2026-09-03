@@ -191,3 +191,7 @@ Adds authenticated Collector-to-Central API delivery. The central ingest endpoin
 ## 2.0.2-alpha
 
 Adds one-click Windows launchers for Azure prerequisite verification and the Central API client safety test. Both launchers change to the repository root automatically, avoiding failures when PowerShell starts in C:\\WINDOWS\\system32. The Central client test treats AZURE_CENTRAL_DISABLED as the expected safe result during pre-deployment.
+
+## 2.0.3-alpha
+
+Adds a one-click Azure PowerShell installer for the current Windows user. The installer checks PowerShell compatibility, blocks unsupported AzureRM coexistence on Windows PowerShell 5.1, ensures PSGallery/NuGet availability, installs the Az rollup module with CurrentUser scope, verifies Az.Accounts/Az.Resources, and then reruns the Azure prerequisite check automatically. No Azure resources are created.
