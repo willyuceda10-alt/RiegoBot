@@ -171,3 +171,7 @@ Introduces candidate incident routing by explicit user/assignment configuration.
 ## 1.9.0-alpha
 
 Adds durable, idempotent incident persistence for the local development phase. Candidate incident episodes are synchronized into a SQLite-backed incidents table plus append-only incident_events audit history. Repeated Dream reads update source/routing/SLA fields without duplicating incidents or resetting an existing workflow status. Adds store summary diagnostics, tests for idempotency/status preservation, and documents the direct migration target to Azure PostgreSQL.
+
+## 1.10.0-alpha
+
+Adds the durable incident lifecycle boundary before Azure integration. Introduces explicit state transitions, acknowledgement semantics, evidence metadata, photo/observation requirements before resolution validation, and an idempotent WhatsApp notification outbox. Unassigned recipient roles are stored as BLOCKED_UNASSIGNED rather than sent. Real WhatsApp delivery remains disabled. Adds lifecycle/outbox diagnostics, tests, and Azure mapping documentation.
