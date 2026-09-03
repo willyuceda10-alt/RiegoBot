@@ -41,6 +41,12 @@ call :RUN_STAGE "Plan SLA y escalamiento candidato" incident-sla-plan
 if not "!RC!"=="0" goto :END
 
 call :RUN_STAGE "Enrutamiento de responsables candidato" incident-routing-candidate
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Persistencia durable de incidencias" incident-sync-candidate
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Resumen de incidencias persistidas" incident-store-summary
 
 :END
 echo.
