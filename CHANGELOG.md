@@ -135,3 +135,7 @@ Fixes irrigation confidence corroboration by applying the configured site timezo
 ## 1.6.6-alpha
 
 Hardens current-irrigation safety. Operational evidence now has a dedicated freshness window (10 minutes by default) instead of relying on the broad 24-hour query freshness. Evidence older than the window is reported as STALE_EVIDENCE. Romeo-level raw flow is no longer allowed to contradict a STOP/FINISH event until meter-to-program/valve scope is validated.
+
+## 1.6.7-alpha
+
+Adds a read-only freshness-source investigation across discovered Dream and shared MDB schemas. Candidate extraction now finds tables with common date/time columns, reads only the latest timestamp per Romeo/table, and summarizes the freshest candidate sources. This is intended to locate the true near-real-time operational source before enabling current irrigation or incident claims.
