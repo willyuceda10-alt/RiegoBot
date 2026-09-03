@@ -35,3 +35,10 @@ echo   Estado operativo candidato
 echo ============================================
 echo.
 call "%~dp0EJECUTAR_DREAMREADER.cmd" candidate-operational-state
+
+echo.
+echo ============================================
+echo   Estado de riego candidato
+echo ============================================
+echo.
+call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-state-candidate
