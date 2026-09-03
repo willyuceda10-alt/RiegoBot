@@ -6,6 +6,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from .evidence_policy import resolve_evidence_policy
+
 DEFAULT_RULES: dict[str, dict[str, Any]] = {
     "33": {"type": "HIGH_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30, "coordinatorEscalateAfterMinutes": 45},
     "34": {"type": "LOW_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30, "coordinatorEscalateAfterMinutes": 45},
@@ -71,6 +73,8 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
             continue
         seen_incident_ids.add(incident_id)
 
+        evidence_policy = resolve_evidence_policy(project_root, str(rule["type"]))
+
         incidents.append({
             "incidentId": incident_id,
             "romeoId": str(row.get("RomeoId") or ""),
@@ -97,9 +101,10 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
                 "repeatUntilResolved": True,
                 "requiresAssignee": True,
             },
-            "requiresPhotoEvidence": True,
-            "requiresObservation": True,
-            "requiresResolutionValidation": True,
+            "requiresPhotoEvidence": evidence_policy["requiresPhotoEvidence"],
+            "requiresObservation": evidence_policy["requiresObservation"],
+            "requiresResolutionValidation": evidence_policy["requiresResolutionValidation"],
+            "evidencePolicySource": evidence_policy["policySource"],
             "mappingStatus": "CANDIDATE",
         })
 
