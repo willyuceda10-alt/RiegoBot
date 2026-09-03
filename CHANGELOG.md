@@ -111,3 +111,7 @@ Adds read-only investigation of TGDReports.mdb/Reports for all configured Romeos
 ## 1.6.0-alpha
 
 Formalizes the scalable N-Romeo architecture. Adds automated discovery coverage for arbitrary Dream IDs, clarifies that configured Dreams are overrides rather than a fixed allowlist, and records product requirements for role-based access, weekly summaries, WhatsApp incident response with photo evidence, repeated SLA reminders, escalation, and central monitoring. Dream access remains read-only.
+
+## 1.6.1-alpha
+
+Adds a candidate multi-Romeo irrigation-state investigation. DreamReader now selects ReportsRT when a Romeo has rows there and falls back to Reports otherwise, exports up to 300 recent events per discovered Romeo, and reconstructs latest program start/stop evidence plus valve open/close transitions. Current irrigation claims remain blocked until temporal completeness and program semantics are validated.
