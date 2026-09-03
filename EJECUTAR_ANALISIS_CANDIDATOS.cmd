@@ -38,6 +38,9 @@ call :RUN_STAGE "Agrupacion de incidencias por episodio" incident-episodes
 if not "!RC!"=="0" goto :END
 
 call :RUN_STAGE "Plan SLA y escalamiento candidato" incident-sla-plan
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Enrutamiento de responsables candidato" incident-routing-candidate
 
 :END
 echo.
