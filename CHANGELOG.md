@@ -183,3 +183,7 @@ Makes photo evidence optional by default. Evidence requirements are now resolved
 ## 2.0.0-alpha
 
 Starts the Azure central-platform phase. Adds a FastAPI central service container, PostgreSQL schema for sites/collectors/Romeos/users/roles/incidents/evidence policies/events/outbox, monitoring/KPI views, Azure Bicep foundation, and guarded Azure PowerShell scripts with no GitHub Actions. Adds deterministic collector batch preview for central ingestion. Historical/stale development data is explicitly forced to TEST_REPLAY and notification outbox items are BLOCKED_TEST_REPLAY so assigning users later cannot accidentally release old test alerts into WhatsApp.
+
+## 2.0.1-alpha
+
+Adds authenticated Collector-to-Central API delivery. The central ingest endpoint now requires an explicit collector ID/key pair and compares credentials securely. DreamReader gains a standard-library HTTPS client with deterministic batch reuse, bounded retries, timeout/backoff controls, localhost-only HTTP development opt-in, and no secrets stored in Git/config. Central delivery remains disabled by default; TEST_REPLAY protections remain active.
