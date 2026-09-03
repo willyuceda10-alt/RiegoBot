@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Header, HTTPException, Query
 from psycopg.types.json import Jsonb
 
+from .auth import require_collector_key
 from .db import database_health, get_connection
 from .schemas import CollectorBatchResult, CollectorIncidentBatch
 from .settings import load_settings
 
 app = FastAPI(
     title="RiegoBot Central API",
-    version="2.0.0-alpha",
+    version="2.0.1-alpha",
     description="Central ingestion and monitoring API for RiegoBot.",
 )
 
@@ -29,7 +30,15 @@ def health() -> dict[str, object]:
     "/api/v1/collector/incident-batches",
     response_model=CollectorBatchResult,
 )
-def ingest_incident_batch(batch: CollectorIncidentBatch) -> CollectorBatchResult:
+def ingest_incident_batch(
+    batch: CollectorIncidentBatch,
+    x_riegobot_collector_id: str | None = Header(default=None),
+    x_riegobot_collector_key: str | None = Header(default=None),
+) -> CollectorBatchResult:
+    if x_riegobot_collector_id and x_riegobot_collector_id != batch.collectorId:
+        raise HTTPException(status_code=400, detail="Collector header/body mismatch.")
+    require_collector_key(batch.collectorId, x_riegobot_collector_key)
+
     settings = load_settings()
     if batch.deliveryMode == "TEST_REPLAY" and not settings.allow_test_replay:
         raise HTTPException(
