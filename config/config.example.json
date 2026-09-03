@@ -1,5 +1,5 @@
 {
-  "version": "1.7.2-alpha",
+  "version": "1.7.3-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -42,6 +42,8 @@
     "sendWhatsApp": false,
     "repeatUntilResolved": true,
     "requirePhotoEvidence": true,
-    "requireObservation": true
+    "requireObservation": true,
+    "episodeGapMinutes": 30,
+    "slaPreviewReminders": 5
   }
 }
