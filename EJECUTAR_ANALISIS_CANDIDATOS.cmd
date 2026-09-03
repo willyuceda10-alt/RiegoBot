@@ -43,3 +43,11 @@ echo   Estado de riego candidato
 echo ============================================
 echo.
 call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-state-candidate /nopause
+
+echo.
+echo ============================================
+echo   Analisis completado
+echo ============================================
+echo.
+echo Presione una tecla para cerrar esta ventana.
+pause >nul
