@@ -139,3 +139,7 @@ Hardens current-irrigation safety. Operational evidence now has a dedicated fres
 ## 1.6.7-alpha
 
 Adds a read-only freshness-source investigation across discovered Dream and shared MDB schemas. Candidate extraction now finds tables with common date/time columns, reads only the latest timestamp per Romeo/table, and summarizes the freshest candidate sources. This is intended to locate the true near-real-time operational source before enabling current irrigation or incident claims.
+
+## 1.6.8-alpha
+
+Separates test-data validity from production freshness. The pilot configuration can accept stale Dream evidence for logic validation while still blocking any claim that it is current production state. Adds allowStaleForTesting and emits TEST_DATA_ACCEPTED plus usableForLogicValidation/testingModeAccepted flags.
