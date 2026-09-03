@@ -10,6 +10,7 @@ class Settings:
     database_url: str | None
     allow_test_replay: bool
     version: str
+    collector_keys_json: str | None
 
 
 def _as_bool(value: str | None, default: bool = False) -> bool:
@@ -23,5 +24,6 @@ def load_settings() -> Settings:
         environment=os.getenv("RIEGOBOT_ENVIRONMENT", "development"),
         database_url=os.getenv("RIEGOBOT_DATABASE_URL"),
         allow_test_replay=_as_bool(os.getenv("RIEGOBOT_ALLOW_TEST_REPLAY"), True),
-        version=os.getenv("RIEGOBOT_VERSION", "2.0.0-alpha"),
+        version=os.getenv("RIEGOBOT_VERSION", "2.0.1-alpha"),
+        collector_keys_json=os.getenv("RIEGOBOT_COLLECTOR_KEYS_JSON"),
     )
