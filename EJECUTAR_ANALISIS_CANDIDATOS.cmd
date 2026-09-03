@@ -56,6 +56,9 @@ call :RUN_STAGE "Sincronizacion de outbox de notificaciones" incident-outbox-syn
 if not "!RC!"=="0" goto :END
 
 call :RUN_STAGE "Resumen de outbox de notificaciones" incident-outbox-summary
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Vista previa de lote para API central" central-batch-preview
 
 :END
 echo.
