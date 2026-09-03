@@ -178,7 +178,9 @@ class IncidentLifecycleTests(unittest.TestCase):
                 second = sync_notification_outbox_candidate(root)
 
             self.assertEqual(first["insertedOutboxItems"], 4)
-            self.assertEqual(first["blockedUnassignedItems"], 4)
+            self.assertEqual(first["blockedTestReplayItems"], 4)
+            self.assertEqual(first["blockedUnassignedItems"], 0)
+            self.assertEqual(first["deliveryMode"], "TEST_REPLAY")
             self.assertEqual(second["insertedOutboxItems"], 0)
             self.assertEqual(second["storedOutboxItemCount"], 4)
 
