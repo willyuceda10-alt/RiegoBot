@@ -7,11 +7,11 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_RULES: dict[str, dict[str, Any]] = {
-    "33": {"type": "HIGH_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30},
-    "34": {"type": "LOW_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30},
-    "2": {"type": "RTU_COMMUNICATION_ERROR", "severity": "CRITICAL", "slaMinutes": 5, "reminderEveryMinutes": 5, "escalateAfterMinutes": 15},
-    "50": {"type": "NO_FERTIGATION_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30},
-    "43": {"type": "LOCAL_LEAK_EVENT", "severity": "MEDIUM", "slaMinutes": 15, "reminderEveryMinutes": 15, "escalateAfterMinutes": 45},
+    "33": {"type": "HIGH_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30, "coordinatorEscalateAfterMinutes": 45},
+    "34": {"type": "LOW_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30, "coordinatorEscalateAfterMinutes": 45},
+    "2": {"type": "RTU_COMMUNICATION_ERROR", "severity": "CRITICAL", "slaMinutes": 5, "reminderEveryMinutes": 5, "escalateAfterMinutes": 15, "coordinatorEscalateAfterMinutes": 30},
+    "50": {"type": "NO_FERTIGATION_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30, "coordinatorEscalateAfterMinutes": 45},
+    "43": {"type": "LOCAL_LEAK_EVENT", "severity": "MEDIUM", "slaMinutes": 15, "reminderEveryMinutes": 15, "escalateAfterMinutes": 45, "coordinatorEscalateAfterMinutes": 60},
 }
 
 def _read_json(path: Path) -> Any:
@@ -80,6 +80,7 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
                 "responseDueMinutes": rule["slaMinutes"],
                 "reminderEveryMinutes": rule["reminderEveryMinutes"],
                 "escalateAfterMinutes": rule["escalateAfterMinutes"],
+                "coordinatorEscalateAfterMinutes": rule.get("coordinatorEscalateAfterMinutes", rule["escalateAfterMinutes"] + rule["reminderEveryMinutes"]),
                 "repeatUntilResolved": True,
             },
             "notificationPlan": {
