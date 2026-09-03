@@ -1,5 +1,5 @@
 {
-  "version": "1.6.8-alpha",
+  "version": "1.7.0-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -52,5 +52,12 @@
   "operationalState": {
     "maxEvidenceAgeMinutes": 10,
     "allowStaleForTesting": true
+  },
+  "incidents": {
+    "mode": "candidate",
+    "sendWhatsApp": false,
+    "repeatUntilResolved": true,
+    "requirePhotoEvidence": true,
+    "requireObservation": true
   }
 }
