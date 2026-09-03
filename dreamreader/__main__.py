@@ -19,6 +19,7 @@ from .routing import build_incident_routing_candidate
 from .incident_store import sync_incident_store_candidate, incident_store_summary
 from .incident_lifecycle import lifecycle_contract, sync_notification_outbox_candidate, notification_outbox_summary
 from .central_sync import build_central_batch_preview
+from .central_client import push_central_batch
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
@@ -32,7 +33,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "incident-episodes", "incident-sla-plan", "incident-routing-candidate", "incident-sync-candidate", "incident-store-summary", "incident-lifecycle-contract", "incident-outbox-sync", "incident-outbox-summary", "central-batch-preview", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "incident-episodes", "incident-sla-plan", "incident-routing-candidate", "incident-sync-candidate", "incident-store-summary", "incident-lifecycle-contract", "incident-outbox-sync", "incident-outbox-summary", "central-batch-preview", "central-push", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -165,6 +166,11 @@ def main() -> int:
         payload = build_central_batch_preview(PROJECT_ROOT)
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0 if payload.get("success") else 7
+
+    if args.command == "central-push":
+        payload = push_central_batch(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 8
 
     if args.command == "realtime":
         return run_realtime_collector(PROJECT_ROOT)
