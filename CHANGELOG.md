@@ -159,3 +159,7 @@ Fixes a PowerShell parser error in the freshness-source diagnostic by delimiting
 ## 1.7.3-alpha
 
 Groups repeated Dream fault signals into candidate incident episodes using Romeo/type/program/object plus a configurable 30-minute signal gap. Adds episode-level counts, first/last detection, signal repetition and stable episode IDs. Also adds a candidate SLA/WhatsApp timeline with initial REGADOR notification, response due time, repeated reminders, supervisor/coordinator escalation and the rule that acknowledgement/in-progress never closes an incident. WhatsApp remains disabled.
+
+## 1.7.4-alpha
+
+Deduplicates exact Dream report rows before incident classification and reports how many duplicate signal rows were dropped. Refines the SLA preview so response due time is metadata rather than a second notification, reminders expand recipients at escalation thresholds, and coincident reminder/escalation events are coalesced to prevent duplicate WhatsApp sends. Adds unit tests for both behaviors.
