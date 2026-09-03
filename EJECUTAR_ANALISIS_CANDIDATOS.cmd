@@ -32,6 +32,12 @@ call :RUN_STAGE "Fuentes candidatas mas frescas" freshness-sources
 if not "!RC!"=="0" goto :END
 
 call :RUN_STAGE "Motor de incidencias candidato" incident-candidates
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Agrupacion de incidencias por episodio" incident-episodes
+if not "!RC!"=="0" goto :END
+
+call :RUN_STAGE "Plan SLA y escalamiento candidato" incident-sla-plan
 
 :END
 echo.
