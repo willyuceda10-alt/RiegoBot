@@ -115,3 +115,7 @@ Formalizes the scalable N-Romeo architecture. Adds automated discovery coverage 
 ## 1.6.1-alpha
 
 Adds a candidate multi-Romeo irrigation-state investigation. DreamReader now selects ReportsRT when a Romeo has rows there and falls back to Reports otherwise, exports up to 300 recent events per discovered Romeo, and reconstructs latest program start/stop evidence plus valve open/close transitions. Current irrigation claims remain blocked until temporal completeness and program semantics are validated.
+
+## 1.6.2-alpha
+
+Fixes the candidate irrigation-state workflow. The core extraction now invokes the multi-Romeo irrigation-state source investigation and includes its count in the session summary. The Windows candidate-analysis launcher no longer pauses before the irrigation-state phase, so the final multi-Romeo state reconstruction runs automatically.
