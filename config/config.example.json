@@ -1,5 +1,5 @@
 {
-  "version": "1.10.0-alpha",
+  "version": "1.10.1-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -41,7 +41,7 @@
     "mode": "candidate",
     "sendWhatsApp": false,
     "repeatUntilResolved": true,
-    "requirePhotoEvidence": true,
+    "requirePhotoEvidence": false,
     "requireObservation": true,
     "episodeGapMinutes": 30,
     "slaPreviewReminders": 5
@@ -66,5 +66,19 @@
     "channel": "WHATSAPP",
     "realSendingEnabled": false,
     "outboxEnabled": true
+  },
+  "incidentEvidencePolicies": {
+    "mode": "candidate",
+    "policySource": "LOCAL_CONFIG_UNTIL_AZURE",
+    "default": {
+      "requiresPhotoEvidence": false,
+      "requiresObservation": true,
+      "requiresResolutionValidation": true
+    },
+    "byIncidentType": {
+      "EXAMPLE_INCIDENT_REQUIRING_PHOTO": {
+        "requiresPhotoEvidence": true
+      }
+    }
   }
 }
