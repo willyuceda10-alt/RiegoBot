@@ -14,6 +14,7 @@ from .irrigation_state import build_irrigation_state_candidate
 from .irrigation_confidence import build_irrigation_confidence_candidate
 from .freshness_sources import summarize_freshness_sources
 from .incidents import build_incident_candidates
+from .incident_workflow import build_incident_episodes, build_incident_sla_plan
 from .config import load_config
 from .discovery import discover_dreams, get_discovery_info
 from .runtime import write_discovery_outputs
@@ -27,7 +28,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
     parser.add_argument(
         "command",
-        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
+        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "incident-episodes", "incident-sla-plan", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
         nargs="?",
         default="discovery",
     )
@@ -113,6 +114,16 @@ def main() -> int:
 
     if args.command == "incident-candidates":
         payload = build_incident_candidates(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-episodes":
+        payload = build_incident_episodes(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-sla-plan":
+        payload = build_incident_sla_plan(PROJECT_ROOT)
         print(json.dumps(payload, indent=2, ensure_ascii=False))
         return 0 if payload.get("success") else 7
 
