@@ -147,3 +147,7 @@ Separates test-data validity from production freshness. The pilot configuration 
 ## 1.7.0-alpha
 
 Introduces the first multi-Romeo candidate incident engine. Historical Dream report events are deterministically classified into incident candidates for high flow, low flow, RTU communication errors, missing fertigation flow and other failure events. Each candidate receives a stable incident ID, severity, SLA/reminder/escalation policy, evidence requirements and the agreed incident lifecycle. WhatsApp and production incident creation remain disabled in candidate mode.
+
+## 1.7.1-alpha
+
+Fixes the one-click candidate analysis launcher so it never closes immediately on a failed stage. Each step now records its name and exit code, jumps to a common summary, and always pauses before closing. Successful runs also remain open at the end.
