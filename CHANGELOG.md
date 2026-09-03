@@ -167,3 +167,7 @@ Deduplicates exact Dream report rows before incident classification and reports 
 ## 1.8.0-alpha
 
 Introduces candidate incident routing by explicit user/assignment configuration. Episodes can now resolve REGADOR, SUPERVISOR and COORDINADOR recipients using Romeo, Fundo, incident type, shift and priority scopes. Missing assignments are surfaced as UNASSIGNED and are blocked from WhatsApp delivery. No names, phone numbers or responsibilities are inferred from Dream data. Adds routing tests and documentation.
+
+## 1.9.0-alpha
+
+Adds durable, idempotent incident persistence for the local development phase. Candidate incident episodes are synchronized into a SQLite-backed incidents table plus append-only incident_events audit history. Repeated Dream reads update source/routing/SLA fields without duplicating incidents or resetting an existing workflow status. Adds store summary diagnostics, tests for idempotency/status preservation, and documents the direct migration target to Azure PostgreSQL.
