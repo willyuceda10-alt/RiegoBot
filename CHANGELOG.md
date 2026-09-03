@@ -175,3 +175,7 @@ Adds durable, idempotent incident persistence for the local development phase. C
 ## 1.10.0-alpha
 
 Adds the durable incident lifecycle boundary before Azure integration. Introduces explicit state transitions, acknowledgement semantics, evidence metadata, photo/observation requirements before resolution validation, and an idempotent WhatsApp notification outbox. Unassigned recipient roles are stored as BLOCKED_UNASSIGNED rather than sent. Real WhatsApp delivery remains disabled. Adds lifecycle/outbox diagnostics, tests, and Azure mapping documentation.
+
+## 1.10.1-alpha
+
+Makes photo evidence optional by default. Evidence requirements are now resolved through a configurable per-incident policy: observation and resolution validation remain required by default, while photo evidence defaults to false and can be enabled for selected incident types. The local candidate policy is designed to be replaced by an Azure-managed central policy without changing the incident workflow code.
