@@ -1,5 +1,5 @@
 {
-  "version": "1.6.7-alpha",
+  "version": "1.6.8-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -34,6 +34,7 @@
     "retentionSessions": 120
   },
   "operationalState": {
-    "maxEvidenceAgeMinutes": 10
+    "maxEvidenceAgeMinutes": 10,
+    "allowStaleForTesting": false
   }
 }
