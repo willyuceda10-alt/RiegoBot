@@ -43,6 +43,13 @@ echo   Estado de riego candidato
 echo ============================================
 echo.
 call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-state-candidate /nopause
+if errorlevel 1 exit /b %ERRORLEVEL%
+echo.
+echo ============================================
+echo   Corroboracion de estado de riego
+echo ============================================
+echo.
+call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-confidence-candidate /nopause
 
 echo.
 echo ============================================
