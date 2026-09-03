@@ -18,15 +18,16 @@ def _as_list(value: Any) -> list[dict[str, Any]]:
         return [value]
     return []
 
-def _load_site_timezone(project_root: Path) -> str:
+def _load_config(project_root: Path) -> dict[str, Any]:
     for path in (project_root/"config"/"config.local.json", project_root/"config"/"config.json"):
         if path.exists():
             try:
                 data=_read_json(path)
-                return str((data.get("site") or {}).get("timezone") or "UTC")
+                if isinstance(data, dict):
+                    return data
             except (OSError, json.JSONDecodeError):
                 pass
-    return "UTC"
+    return {}
 
 def _parse_ts(value: Any, site_timezone: str) -> datetime | None:
     if not value:
@@ -48,38 +49,48 @@ def build_irrigation_confidence_candidate(project_root: Path) -> dict[str, Any]:
     if not state.get("success"):
         return state
 
-    site_timezone=_load_site_timezone(project_root)
+    config=_load_config(project_root)
+    site_timezone=str((config.get("site") or {}).get("timezone") or "UTC")
+    operational_cfg=config.get("operationalState") or {}
+    max_age_minutes=float(operational_cfg.get("maxEvidenceAgeMinutes") or 10)
+
     session=Path(str(state["sourceSession"]))
     snapshot_path=session/"normalized"/"romeo_snapshot.json"
     snapshots=_as_list(_read_json(snapshot_path)) if snapshot_path.exists() else []
 
     result=[]
+    now_utc=datetime.now(timezone.utc)
+
     for romeo in state.get("romeos", []):
         rid=str(romeo.get("romeoId") or "")
         meters=[x for x in snapshots if str(x.get("RomeoId") or x.get("DreamId") or "")==rid]
-        nonzero=[x for x in meters if x.get("FlowRawValue") is not None and float(x.get("FlowRawValue") or 0)!=0.0]
         meter_ts=[(_parse_ts(x.get("FlowTimestamp") or x.get("MeterTimestamp"), site_timezone), x) for x in meters]
         meter_ts=[pair for pair in meter_ts if pair[0] is not None]
-        latest=max((pair[0] for pair in meter_ts), default=None)
-
-        age_hours=None
-        if latest is not None:
-            age_hours=max(0.0,(datetime.now(timezone.utc)-latest.astimezone(timezone.utc)).total_seconds()/3600.0)
+        latest_flow=max((pair[0] for pair in meter_ts), default=None)
 
         cycle=romeo.get("cycleEvidence") or {}
         state_name=str(romeo.get("candidateIrrigationState") or "UNKNOWN")
         boundary_raw=cycle.get("cycleStartedAt") if state_name=="IRRIGATING_CANDIDATE" else cycle.get("cycleEndedAt")
         boundary=_parse_ts(boundary_raw, site_timezone)
 
+        latest_program_event=romeo.get("latestProgramEvent") or {}
+        program_event_ts=_parse_ts(latest_program_event.get("Timestamp"), site_timezone)
+
+        latest_evidence=max([x for x in (latest_flow, program_event_ts) if x is not None], default=None)
+        evidence_age_minutes=None
+        if latest_evidence is not None:
+            evidence_age_minutes=max(0.0,(now_utc-latest_evidence.astimezone(timezone.utc)).total_seconds()/60.0)
+        evidence_fresh=(evidence_age_minutes is not None and evidence_age_minutes <= max_age_minutes)
+
+        nonzero=[x for x in meters if x.get("FlowRawValue") is not None and float(x.get("FlowRawValue") or 0)!=0.0]
         recent_nonzero=[]
-        recent_zero=[]
+        aligned_rows=[]
         if boundary is not None:
             for ts,row in meter_ts:
                 if ts >= boundary:
+                    aligned_rows.append(row)
                     if row.get("FlowRawValue") is not None and float(row.get("FlowRawValue") or 0)!=0.0:
                         recent_nonzero.append(row)
-                    else:
-                        recent_zero.append(row)
 
         flow_support=None
         evidence_basis="UNALIGNED"
@@ -88,10 +99,13 @@ def build_irrigation_confidence_candidate(project_root: Path) -> dict[str, Any]:
             if state_name=="IRRIGATING_CANDIDATE":
                 flow_support=len(recent_nonzero)>0
             elif state_name=="NOT_IRRIGATING_CANDIDATE":
-                # Do not treat older/non-aligned non-zero snapshots as a conflict.
-                flow_support=(len(recent_nonzero)==0) if any(ts >= boundary for ts,_ in meter_ts) else None
+                # Romeo-level flow is not yet linked to the same program/valve.
+                # Therefore it cannot contradict a STOP/FINISH event.
+                flow_support=True if len(aligned_rows)>0 and len(recent_nonzero)==0 else None
 
-        if flow_support is True:
+        if not evidence_fresh:
+            confidence="STALE_EVIDENCE"
+        elif flow_support is True:
             confidence="CORROBORATED_CANDIDATE"
         elif flow_support is False:
             confidence="CONFLICTING_EVIDENCE"
@@ -108,19 +122,25 @@ def build_irrigation_confidence_candidate(project_root: Path) -> dict[str, Any]:
             "meterCount": len(meters),
             "nonZeroFlowObservationCount": len(nonzero),
             "nonZeroFlowAfterCycleBoundaryCount": len(recent_nonzero),
-            "latestFlowTimestamp": latest.isoformat() if latest else None,
-            "flowAgeHours": round(age_hours,2) if age_hours is not None else None,
+            "latestFlowTimestamp": latest_flow.isoformat() if latest_flow else None,
+            "latestProgramEvidenceTimestamp": program_event_ts.isoformat() if program_event_ts else None,
+            "latestOperationalEvidenceTimestamp": latest_evidence.isoformat() if latest_evidence else None,
+            "operationalEvidenceAgeMinutes": round(evidence_age_minutes,2) if evidence_age_minutes is not None else None,
+            "maxEvidenceAgeMinutes": max_age_minutes,
+            "evidenceFresh": evidence_fresh,
             "flowEvidenceBasis": evidence_basis,
             "flowCorroboratesCandidateState": flow_support,
+            "flowScopeValidated": False,
             "confidenceStatus": confidence,
             "canClaimCurrentIrrigation": False,
-            "safeNote": "La corroboracion usa solo flujo crudo temporalmente alineado al ciclo y la zona horaria del sitio. Las unidades/semantica siguen sin validar, por lo que no habilita aun una afirmacion productiva.",
+            "safeNote": "Para estado actual, la evidencia debe ser reciente. El flujo crudo no esta aun vinculado a programa/valvula y no puede contradecir por si solo un STOP/FINISH. Las unidades/semantica siguen sin validar.",
         })
 
     return {
         "success": True,
         "sourceSession": str(session),
         "siteTimezone": site_timezone,
+        "maxEvidenceAgeMinutes": max_age_minutes,
         "romeoCount": len(result),
         "romeos": result,
         "interpretationStatus": "CANDIDATE",
