@@ -827,7 +827,7 @@ function Invoke-FreshnessSourceInvestigation {
                             MappingStatus = 'CANDIDATE'
                         })
                     } catch {
-                        Write-ReaderLog $LogPath 'INFO' 'FreshnessSource' $dreamKey $databaseName ("Skipped $tableName: " + $_.Exception.Message)
+                        Write-ReaderLog $LogPath 'INFO' 'FreshnessSource' $dreamKey $databaseName ("Skipped ${tableName}: " + $_.Exception.Message)
                     }
                 }
             }
