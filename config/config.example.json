@@ -1,5 +1,5 @@
 {
-  "version": "1.9.0-alpha",
+  "version": "1.10.0-alpha",
   "readOnly": true,
   "site": {
     "timezone": "America/Lima"
@@ -60,5 +60,11 @@
     "backend": "sqlite",
     "path": "runtime/incident_state.db",
     "migrationTarget": "AZURE_POSTGRESQL"
+  },
+  "notifications": {
+    "mode": "candidate",
+    "channel": "WHATSAPP",
+    "realSendingEnabled": false,
+    "outboxEnabled": true
   }
 }
