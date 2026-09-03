@@ -187,3 +187,7 @@ Starts the Azure central-platform phase. Adds a FastAPI central service containe
 ## 2.0.1-alpha
 
 Adds authenticated Collector-to-Central API delivery. The central ingest endpoint now requires an explicit collector ID/key pair and compares credentials securely. DreamReader gains a standard-library HTTPS client with deterministic batch reuse, bounded retries, timeout/backoff controls, localhost-only HTTP development opt-in, and no secrets stored in Git/config. Central delivery remains disabled by default; TEST_REPLAY protections remain active.
+
+## 2.0.2-alpha
+
+Adds one-click Windows launchers for Azure prerequisite verification and the Central API client safety test. Both launchers change to the repository root automatically, avoiding failures when PowerShell starts in C:\\WINDOWS\\system32. The Central client test treats AZURE_CENTRAL_DISABLED as the expected safe result during pre-deployment.
