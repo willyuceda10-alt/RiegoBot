@@ -155,3 +155,7 @@ Fixes the one-click candidate analysis launcher so it never closes immediately o
 ## 1.7.2-alpha
 
 Fixes a PowerShell parser error in the freshness-source diagnostic by delimiting the table variable before a colon. Candidate extraction can now load NormalizedExtraction.ps1 and proceed to the incident-engine stages.
+
+## 1.7.3-alpha
+
+Groups repeated Dream fault signals into candidate incident episodes using Romeo/type/program/object plus a configurable 30-minute signal gap. Adds episode-level counts, first/last detection, signal repetition and stable episode IDs. Also adds a candidate SLA/WhatsApp timeline with initial REGADOR notification, response due time, repeated reminders, supervisor/coordinator escalation and the rule that acknowledgement/in-progress never closes an incident. WhatsApp remains disabled.
