@@ -163,3 +163,7 @@ Groups repeated Dream fault signals into candidate incident episodes using Romeo
 ## 1.7.4-alpha
 
 Deduplicates exact Dream report rows before incident classification and reports how many duplicate signal rows were dropped. Refines the SLA preview so response due time is metadata rather than a second notification, reminders expand recipients at escalation thresholds, and coincident reminder/escalation events are coalesced to prevent duplicate WhatsApp sends. Adds unit tests for both behaviors.
+
+## 1.8.0-alpha
+
+Introduces candidate incident routing by explicit user/assignment configuration. Episodes can now resolve REGADOR, SUPERVISOR and COORDINADOR recipients using Romeo, Fundo, incident type, shift and priority scopes. Missing assignments are surfaced as UNASSIGNED and are blocked from WhatsApp delivery. No names, phone numbers or responsibilities are inferred from Dream data. Adds routing tests and documentation.
