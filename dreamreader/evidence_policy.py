@@ -12,8 +12,13 @@ DEFAULT_EVIDENCE_POLICY: dict[str, bool] = {
 }
 
 
-def resolve_evidence_policy(project_root: Path, incident_type: str) -> dict[str, Any]:
-    config = load_config(project_root)
+def resolve_evidence_policy(
+    project_root: Path,
+    incident_type: str,
+    *,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    config = config or load_config(project_root)
     root = config.get("incidentEvidencePolicies") or {}
     default_policy = {
         **DEFAULT_EVIDENCE_POLICY,
