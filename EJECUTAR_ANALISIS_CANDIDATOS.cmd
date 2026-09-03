@@ -34,11 +34,12 @@ echo ============================================
 echo   Estado operativo candidato
 echo ============================================
 echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" candidate-operational-state
+call "%~dp0EJECUTAR_DREAMREADER.cmd" candidate-operational-state /nopause
+if errorlevel 1 exit /b %ERRORLEVEL%
 
 echo.
 echo ============================================
 echo   Estado de riego candidato
 echo ============================================
 echo.
-call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-state-candidate
+call "%~dp0EJECUTAR_DREAMREADER.cmd" irrigation-state-candidate /nopause
