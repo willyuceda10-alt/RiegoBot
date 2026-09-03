@@ -131,3 +131,7 @@ Adds a second candidate corroboration layer for irrigation state. The current-cy
 ## 1.6.5-alpha
 
 Fixes irrigation confidence corroboration by applying the configured site timezone to naive Dream timestamps and by aligning raw-flow evidence to the current program cycle boundary. Older non-zero flow observations no longer create false conflicts after a STOP/FINISH event. Current-irrigation production claims remain disabled pending semantic validation.
+
+## 1.6.6-alpha
+
+Hardens current-irrigation safety. Operational evidence now has a dedicated freshness window (10 minutes by default) instead of relying on the broad 24-hour query freshness. Evidence older than the window is reported as STALE_EVIDENCE. Romeo-level raw flow is no longer allowed to contradict a STOP/FINISH event until meter-to-program/valve scope is validated.
