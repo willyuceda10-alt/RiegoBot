@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .evidence_policy import resolve_evidence_policy
+from .config import load_config
 
 DEFAULT_RULES: dict[str, dict[str, Any]] = {
     "33": {"type": "HIGH_FLOW", "severity": "HIGH", "slaMinutes": 10, "reminderEveryMinutes": 10, "escalateAfterMinutes": 30, "coordinatorEscalateAfterMinutes": 45},
@@ -46,6 +47,7 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
     if source is None:
         return {"success": False, "error": "No existe reports_history_candidate.json."}
 
+    config = load_config(project_root)
     raw = _read_json(source)
     rows = [raw] if isinstance(raw, dict) else [row for row in raw if isinstance(row, dict)] if isinstance(raw, list) else []
     incidents: list[dict[str, Any]] = []
@@ -73,7 +75,7 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
             continue
         seen_incident_ids.add(incident_id)
 
-        evidence_policy = resolve_evidence_policy(project_root, str(rule["type"]))
+        evidence_policy = resolve_evidence_policy(project_root, str(rule["type"]), config=config)
 
         incidents.append({
             "incidentId": incident_id,
