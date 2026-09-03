@@ -179,3 +179,7 @@ Adds the durable incident lifecycle boundary before Azure integration. Introduce
 ## 1.10.1-alpha
 
 Makes photo evidence optional by default. Evidence requirements are now resolved through a configurable per-incident policy: observation and resolution validation remain required by default, while photo evidence defaults to false and can be enabled for selected incident types. The local candidate policy is designed to be replaced by an Azure-managed central policy without changing the incident workflow code.
+
+## 2.0.0-alpha
+
+Starts the Azure central-platform phase. Adds a FastAPI central service container, PostgreSQL schema for sites/collectors/Romeos/users/roles/incidents/evidence policies/events/outbox, monitoring/KPI views, Azure Bicep foundation, and guarded Azure PowerShell scripts with no GitHub Actions. Adds deterministic collector batch preview for central ingestion. Historical/stale development data is explicitly forced to TEST_REPLAY and notification outbox items are BLOCKED_TEST_REPLAY so assigning users later cannot accidentally release old test alerts into WhatsApp.
