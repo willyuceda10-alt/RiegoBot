@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException, Query
+from psycopg.types.json import Jsonb
 
 from .db import database_health, get_connection
 from .schemas import CollectorBatchResult, CollectorIncidentBatch
@@ -162,7 +163,7 @@ def ingest_incident_batch(batch: CollectorIncidentBatch) -> CollectorBatchResult
                         incident.requiresPhotoEvidence,
                         incident.requiresObservation,
                         incident.requiresResolutionValidation,
-                        incident.sourcePayload,
+                        Jsonb(incident.sourcePayload),
                     ),
                 )
 
@@ -178,11 +179,11 @@ def ingest_incident_batch(batch: CollectorIncidentBatch) -> CollectorBatchResult
                         """,
                         (
                             incident.episodeId,
-                            {
+                            Jsonb({
                                 "collectorId": batch.collectorId,
                                 "batchId": batch.batchId,
                                 "deliveryMode": batch.deliveryMode,
-                            },
+                            }),
                         ),
                     )
                 else:
