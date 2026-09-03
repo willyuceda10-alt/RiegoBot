@@ -151,3 +151,7 @@ Introduces the first multi-Romeo candidate incident engine. Historical Dream rep
 ## 1.7.1-alpha
 
 Fixes the one-click candidate analysis launcher so it never closes immediately on a failed stage. Each step now records its name and exit code, jumps to a common summary, and always pauses before closing. Successful runs also remain open at the end.
+
+## 1.7.2-alpha
+
+Fixes a PowerShell parser error in the freshness-source diagnostic by delimiting the table variable before a colon. Candidate extraction can now load NormalizedExtraction.ps1 and proceed to the incident-engine stages.
