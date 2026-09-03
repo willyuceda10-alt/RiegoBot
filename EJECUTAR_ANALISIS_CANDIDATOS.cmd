@@ -57,6 +57,13 @@ echo   Fuentes candidatas mas frescas
 echo ============================================
 echo.
 call "%~dp0EJECUTAR_DREAMREADER.cmd" freshness-sources /nopause
+if errorlevel 1 exit /b %ERRORLEVEL%
+echo.
+echo ============================================
+echo   Motor de incidencias candidato
+echo ============================================
+echo.
+call "%~dp0EJECUTAR_DREAMREADER.cmd" incident-candidates /nopause
 
 echo.
 echo ============================================
