@@ -127,3 +127,7 @@ Refines irrigation-state reconstruction around the current program cycle. Valve 
 ## 1.6.4-alpha
 
 Adds a second candidate corroboration layer for irrigation state. The current-cycle result is compared with fresh raw flow presence from the same normalized session. This yields CORROBORATED_CANDIDATE, CONFLICTING_EVIDENCE, or UNRESOLVED per Romeo while keeping flow units unresolved and current-irrigation production claims disabled.
+
+## 1.6.5-alpha
+
+Fixes irrigation confidence corroboration by applying the configured site timezone to naive Dream timestamps and by aligning raw-flow evidence to the current program cycle boundary. Older non-zero flow observations no longer create false conflicts after a STOP/FINISH event. Current-irrigation production claims remain disabled pending semantic validation.
