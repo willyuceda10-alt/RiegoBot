@@ -100,6 +100,7 @@ def lifecycle_contract() -> dict[str, Any]:
         "outbox": {
             "channel": "WHATSAPP",
             "idempotent": True,
+            "testReplayStatus": "BLOCKED_TEST_REPLAY",
             "unassignedStatus": "BLOCKED_UNASSIGNED",
             "realSendingEnabled": False,
         },
@@ -385,8 +386,17 @@ def sync_notification_outbox_candidate(project_root: Path) -> dict[str, Any]:
     updated = 0
     pending = 0
     blocked = 0
+    blocked_test_replay = 0
+    blocked_unassigned = 0
     skipped_terminal = 0
     now = _utc_now()
+
+    notifications_cfg = config.get("notifications") or {}
+    operational_cfg = config.get("operationalState") or {}
+    test_replay_mode = (
+        str(notifications_cfg.get("mode") or "candidate").lower() != "production"
+        or bool(operational_cfg.get("allowStaleForTesting", False))
+    )
 
     with _connect(db_path) as connection:
         _init_lifecycle_schema(connection)
@@ -417,7 +427,10 @@ def sync_notification_outbox_candidate(project_root: Path) -> dict[str, Any]:
                 for role in event.get("recipients", []):
                     role = str(role)
                     user_id = assignees.get(role)
-                    status = "PENDING" if user_id else "BLOCKED_UNASSIGNED"
+                    if test_replay_mode:
+                        status = "BLOCKED_TEST_REPLAY"
+                    else:
+                        status = "PENDING" if user_id else "BLOCKED_UNASSIGNED"
                     outbox_id = _outbox_id(episode_id, action, role, scheduled_at)
                     payload = {
                         "episodeId": episode_id,
@@ -426,6 +439,7 @@ def sync_notification_outbox_candidate(project_root: Path) -> dict[str, Any]:
                         "recipientUserId": user_id,
                         "scheduledAt": scheduled_at,
                         "channel": "WHATSAPP",
+                        "deliveryMode": "TEST_REPLAY" if test_replay_mode else "PRODUCTION",
                     }
 
                     existing = connection.execute(
@@ -479,6 +493,10 @@ def sync_notification_outbox_candidate(project_root: Path) -> dict[str, Any]:
                         pending += 1
                     else:
                         blocked += 1
+                        if status == "BLOCKED_TEST_REPLAY":
+                            blocked_test_replay += 1
+                        elif status == "BLOCKED_UNASSIGNED":
+                            blocked_unassigned += 1
 
         connection.commit()
         total = int(
@@ -493,10 +511,13 @@ def sync_notification_outbox_candidate(project_root: Path) -> dict[str, Any]:
         "insertedOutboxItems": inserted,
         "updatedOutboxItems": updated,
         "pendingRecipientItems": pending,
-        "blockedUnassignedItems": blocked,
+        "blockedItems": blocked,
+        "blockedTestReplayItems": blocked_test_replay,
+        "blockedUnassignedItems": blocked_unassigned,
         "terminalIncidentsSkipped": skipped_terminal,
         "storedOutboxItemCount": total,
         "idempotent": True,
+        "deliveryMode": "TEST_REPLAY" if test_replay_mode else "PRODUCTION",
         "sendsWhatsApp": False,
     }
 
