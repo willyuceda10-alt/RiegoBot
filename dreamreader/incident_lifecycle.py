@@ -91,9 +91,11 @@ def lifecycle_contract() -> dict[str, Any]:
             "resolvedOrClosedStopsReminders": True,
         },
         "resolutionRequirements": {
-            "observation": True,
-            "photoEvidence": True,
+            "observationDefaultRequired": True,
+            "photoEvidenceDefaultRequired": False,
+            "photoEvidence": "CONFIGURABLE_BY_INCIDENT_TYPE",
             "validationBeforeResolved": True,
+            "futurePolicyAuthority": "AZURE_CENTRAL_POLICY",
         },
         "outbox": {
             "channel": "WHATSAPP",
