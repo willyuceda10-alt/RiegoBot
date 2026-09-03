@@ -641,3 +641,88 @@ function Invoke-ReportsHistoryInvestigation {
         if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
     }
 }
+
+
+function Invoke-IrrigationStateCandidateInvestigation {
+    param(
+        [string]$BaseDirectory,
+        $Config,
+        [object[]]$Dreams,
+        [string]$SessionDirectory,
+        [System.Collections.Generic.List[object]]$Metrics,
+        [string]$LogPath,
+        [bool]$AllowCandidateMappings
+    )
+
+    if (-not $AllowCandidateMappings) { return @() }
+
+    $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
+    New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
+    $databasePath = Join-Path (Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)) 'TGDReports.mdb'
+    if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { return @() }
+
+    $opened = $null
+    try {
+        $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
+        $schemaColumns = $opened.Connection.GetSchema('Columns')
+        $rows = [System.Collections.Generic.List[object]]::new()
+
+        foreach ($dream in @($Dreams | Where-Object { $_.Status -in @('CONFIGURED','DISCOVERED') })) {
+            if ([string]$dream.DreamId -notmatch '^[0-9]+$') { continue }
+
+            $sourceTable = $null
+            $reportsRTCols = @($schemaColumns.Select("TABLE_NAME = 'ReportsRT'") | ForEach-Object { [string]$_['COLUMN_NAME'] })
+            $reportsCols = @($schemaColumns.Select("TABLE_NAME = 'Reports'") | ForEach-Object { [string]$_['COLUMN_NAME'] })
+
+            if ($reportsRTCols -contains 'Dream') {
+                $probe = @(Invoke-SafeRead -Connection $opened.Connection -Sql ("SELECT TOP 1 [Dream] FROM [ReportsRT] WHERE [Dream] = " + $dream.DreamId) -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 1)
+                if ($probe.Count -gt 0) { $sourceTable = 'ReportsRT' }
+            }
+            if ($null -eq $sourceTable -and $reportsCols -contains 'Dream') {
+                $sourceTable = 'Reports'
+            }
+            if ($null -eq $sourceTable) { continue }
+
+            $sql = "SELECT TOP 300 [Dream], [RepDate], [RepTime], [RepCode], [RepCodeStr], [RepFail], [State], [Repid1], [Repid2], [Repid2Name] FROM [$sourceTable] WHERE [Dream] = $($dream.DreamId) ORDER BY [RepDate] DESC, [RepTime] DESC"
+            $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 300)
+
+            $rows.Add([pscustomobject]@{
+                RomeoKey = [string]$dream.DreamKey
+                RomeoId = [string]$dream.DreamId
+                SourceDatabase = 'TGDReports.mdb'
+                SourceTable = $sourceTable
+                SampleCount = $sourceRows.Count
+                MappingStatus = 'CANDIDATE'
+            })
+
+            @($sourceRows) | ForEach-Object {
+                $timestamp = $null
+                if ($null -ne $_.RepDate -and $null -ne $_.RepTime) {
+                    $timestamp = ([datetime]$_.RepDate).Date.Add(([datetime]$_.RepTime).TimeOfDay).ToString('o')
+                }
+                [pscustomobject]@{
+                    RomeoKey = [string]$dream.DreamKey
+                    RomeoId = [string]$dream.DreamId
+                    Timestamp = $timestamp
+                    ReportCodeRaw = $_.RepCode
+                    ReportTextRaw = [string]$_.RepCodeStr
+                    ReportFailRaw = $_.RepFail
+                    StateRaw = $_.State
+                    ReportId1Raw = $_.Repid1
+                    ReportId2Raw = $_.Repid2
+                    ReportId2NameRaw = [string]$_.Repid2Name
+                    SourceDatabase = 'TGDReports.mdb'
+                    SourceTable = $sourceTable
+                    MappingStatus = 'CANDIDATE'
+                }
+            } | Export-Csv -LiteralPath (Join-Path $normalizedDirectory ("irrigation_state_events_" + $dream.DreamId + ".csv")) -NoTypeInformation -Encoding utf8
+        }
+
+        @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'irrigation_state_sources_candidate.csv') -NoTypeInformation -Encoding utf8
+        @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'irrigation_state_sources_candidate.json') -Encoding utf8
+        return @($rows)
+    }
+    finally {
+        if ($null -ne $opened) { $opened.Connection.Close(); $opened.Connection.Dispose() }
+    }
+}
