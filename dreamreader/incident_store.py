@@ -67,7 +67,7 @@ def _init_schema(connection: sqlite3.Connection) -> None:
             response_due_at TEXT,
             supervisor_escalation_at TEXT,
             coordinator_escalation_at TEXT,
-            requires_photo_evidence INTEGER NOT NULL DEFAULT 1,
+            requires_photo_evidence INTEGER NOT NULL DEFAULT 0,
             requires_observation INTEGER NOT NULL DEFAULT 1,
             requires_resolution_validation INTEGER NOT NULL DEFAULT 1,
             mapping_status TEXT NOT NULL DEFAULT 'CANDIDATE',
