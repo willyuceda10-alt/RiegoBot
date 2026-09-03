@@ -47,6 +47,8 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
     raw = _read_json(source)
     rows = [raw] if isinstance(raw, dict) else [row for row in raw if isinstance(row, dict)] if isinstance(raw, list) else []
     incidents: list[dict[str, Any]] = []
+    seen_incident_ids: set[str] = set()
+    duplicate_signal_rows_dropped = 0
 
     for row in rows:
         code = str(row.get("ReportCodeRaw") or "")
@@ -63,8 +65,14 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
             "escalateAfterMinutes": 45,
         }
 
+        incident_id = _incident_id(row)
+        if incident_id in seen_incident_ids:
+            duplicate_signal_rows_dropped += 1
+            continue
+        seen_incident_ids.add(incident_id)
+
         incidents.append({
-            "incidentId": _incident_id(row),
+            "incidentId": incident_id,
             "romeoId": str(row.get("RomeoId") or ""),
             "detectedAt": row.get("Timestamp"),
             "incidentType": rule["type"],
@@ -102,6 +110,8 @@ def build_incident_candidates(project_root: Path) -> dict[str, Any]:
     return {
         "success": True,
         "sourceFile": str(source),
+        "sourceRowCount": len(rows),
+        "duplicateSignalRowsDropped": duplicate_signal_rows_dropped,
         "incidentCount": len(incidents),
         "byType": dict(sorted(by_type.items())),
         "byRomeo": dict(sorted(by_romeo.items())),
