@@ -53,6 +53,7 @@ def build_irrigation_confidence_candidate(project_root: Path) -> dict[str, Any]:
     site_timezone=str((config.get("site") or {}).get("timezone") or "UTC")
     operational_cfg=config.get("operationalState") or {}
     max_age_minutes=float(operational_cfg.get("maxEvidenceAgeMinutes") or 10)
+    allow_stale_for_testing=bool(operational_cfg.get("allowStaleForTesting", False))
 
     session=Path(str(state["sourceSession"]))
     snapshot_path=session/"normalized"/"romeo_snapshot.json"
@@ -103,7 +104,9 @@ def build_irrigation_confidence_candidate(project_root: Path) -> dict[str, Any]:
                 # Therefore it cannot contradict a STOP/FINISH event.
                 flow_support=True if len(aligned_rows)>0 and len(recent_nonzero)==0 else None
 
-        if not evidence_fresh:
+        if not evidence_fresh and allow_stale_for_testing:
+            confidence="TEST_DATA_ACCEPTED"
+        elif not evidence_fresh:
             confidence="STALE_EVIDENCE"
         elif flow_support is True:
             confidence="CORROBORATED_CANDIDATE"
@@ -127,13 +130,16 @@ def build_irrigation_confidence_candidate(project_root: Path) -> dict[str, Any]:
             "latestOperationalEvidenceTimestamp": latest_evidence.isoformat() if latest_evidence else None,
             "operationalEvidenceAgeMinutes": round(evidence_age_minutes,2) if evidence_age_minutes is not None else None,
             "maxEvidenceAgeMinutes": max_age_minutes,
+        "allowStaleForTesting": allow_stale_for_testing,
             "evidenceFresh": evidence_fresh,
+            "usableForLogicValidation": bool(evidence_fresh or allow_stale_for_testing),
+            "testingModeAccepted": bool((not evidence_fresh) and allow_stale_for_testing),
             "flowEvidenceBasis": evidence_basis,
             "flowCorroboratesCandidateState": flow_support,
             "flowScopeValidated": False,
             "confidenceStatus": confidence,
             "canClaimCurrentIrrigation": False,
-            "safeNote": "Para estado actual, la evidencia debe ser reciente. El flujo crudo no esta aun vinculado a programa/valvula y no puede contradecir por si solo un STOP/FINISH. Las unidades/semantica siguen sin validar.",
+            "safeNote": "La evidencia antigua puede usarse para validar logica cuando allowStaleForTesting=true, pero nunca se presenta como estado actual de produccion. El flujo crudo no esta aun vinculado a programa/valvula.",
         })
 
     return {
