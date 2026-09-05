@@ -9,4 +9,3 @@ declare r rules;claimed text;begin
 end $$;
 revoke all on function evaluate_alert(uuid,text,text,text,jsonb) from public,anon,authenticated;
 grant execute on function evaluate_alert(uuid,text,text,text,jsonb) to service_role;
-

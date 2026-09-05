@@ -14,4 +14,3 @@ declare c collectors;r jsonb;begin
 end $$;
 revoke all on function public.ingest_batch(uuid,uuid,jsonb) from public,anon,authenticated;
 grant execute on function public.ingest_batch(uuid,uuid,jsonb) to service_role;
-

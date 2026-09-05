@@ -6,4 +6,3 @@ create function public.query_readings(s uuid,e text,d text default null,today_on
 $$;
 revoke all on function query_readings(uuid,text,text,boolean) from public,anon,authenticated;
 grant execute on function query_readings(uuid,text,text,boolean) to service_role;
-

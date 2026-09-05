@@ -8,4 +8,3 @@ select cron.schedule('riegobot-dispatch','* * * * *',$job$
  body:='{}'::jsonb
  );
 $job$);
-

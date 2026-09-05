@@ -98,4 +98,3 @@ def main():
         if args.once:break
         time.sleep(max(30,cfg.get("supabase",{}).get("intervalSeconds",60)))
 if __name__=="__main__":main()
-

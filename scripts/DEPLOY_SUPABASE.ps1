@@ -14,4 +14,3 @@ foreach($function in @('api','ingest','whatsapp-webhook','worker')){
  if($LASTEXITCODE -ne 0){throw "Deploy failed: $function"}
 }
 Write-Host 'Backend deployed. Configure dispatcher Vault values, staff access and WhatsApp before enabling real deliveries.'
-

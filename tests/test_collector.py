@@ -21,4 +21,3 @@ class CollectorTests(unittest.TestCase):
             result=discover_dreams(Path(tmp),cfg)
             self.assertEqual([r["status"] for r in result],["UNKNOWN","DISABLED"])
 if __name__=="__main__":unittest.main()
-

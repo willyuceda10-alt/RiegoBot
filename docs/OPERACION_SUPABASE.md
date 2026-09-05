@@ -107,4 +107,3 @@ Falta autenticar/desplegar el proyecto remoto, asociar número Meta, configurar 
 No prometer ahorro de agua ni “sin alarmas” ante falta de datos.
 El panel resume las últimas 200 incidencias y 80 mensajes. Las consultas de telemetría devuelven como máximo 1000 observaciones y muestran diez por mensaje. La paginación/históricos exhaustivos puede consumirse en Postgres, pero el chat informa el límite.
 La interfaz administrativa requiere una política corporativa para altas, turnos y suplencias; esta versión configura contactos y escalamiento por regla, sin calendario de turnos automático.
-

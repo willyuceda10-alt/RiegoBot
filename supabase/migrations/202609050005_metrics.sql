@@ -3,4 +3,3 @@ alter table metric_mappings enable row level security;
 create policy mapping_read on metric_mappings for select to authenticated using(has_site(site_id));
 grant select on metric_mappings to authenticated;
 revoke insert,update,delete on metric_mappings from authenticated,anon;
-
