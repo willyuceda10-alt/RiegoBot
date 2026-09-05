@@ -181,7 +181,7 @@ function Get-SchemaComparison {
 function Invoke-DreamReader {
     param([string]$BaseDirectory, [string]$ExtractionMode = '', [bool]$AllowCandidateMappings = $false)
     $configPath = Join-Path $BaseDirectory 'config\config.json'
-    $config = Get-Content -Raw -LiteralPath $configPath | ConvertFrom-Json
+    $config = Get-ReaderConfig $BaseDirectory
     if (-not $config.readOnly) { throw 'Configuration rejected: readOnly must be true.' }
     if ($config.runtime.realtimeMode) { throw 'Configuration rejected: realtimeMode must be false in 1.3.0-alpha.' }
     if ([string]::IsNullOrWhiteSpace($ExtractionMode)) { $ExtractionMode = if ($config.extractionMode) { [string]$config.extractionMode } else { 'DISCOVERY' } }
@@ -200,7 +200,7 @@ function Invoke-DreamReader {
     if (-not (Test-Path -LiteralPath $root -PathType Container)) { $warnings.Add("Discovery root does not exist: $root"); Write-ReaderLog $logPath 'WARN' 'Discovery' '' '' "Discovery root does not exist: $root" }
     foreach ($dream in $dreams) { Write-ReaderLog $logPath 'INFO' 'Discovery' $dream.DreamKey $dream.FileName "Dream status: $($dream.Status)" }
     $dreams | Export-Csv -LiteralPath (Join-Path $sessionDir 'dream_inventory.csv') -NoTypeInformation -Encoding utf8
-    $dreams | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionDir 'dream_inventory.json') -Encoding utf8
+    ConvertTo-Json -InputObject @($dreams) -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionDir 'dream_inventory.json') -Encoding utf8
     foreach ($item in $shared) { if ($item.Status -eq 'SHARED_CANDIDATE') { Write-ReaderLog $logPath 'INFO' 'Discovery' 'SHARED' $item.DatabaseName 'Shared candidate detected.' } }
     foreach ($database in @($shared | Where-Object Status -eq 'SHARED_CANDIDATE')) {
         $watch.Restart(); try { $readResult = Read-DatabaseSchema $database.Path 'SHARED' $database.DatabaseName ([int]$config.runtime.queryTimeoutSeconds) $tables $columns; $database.Tables = $readResult.TableCount; Add-PerformanceRecord $metrics $config.collector.collectorId 'SHARED' $database.DatabaseName 'DatabaseOpen' $readResult.Provider $readResult.OpenDurationMs 0 $true ''; Add-PerformanceRecord $metrics $config.collector.collectorId 'SHARED' $database.DatabaseName 'SchemaRead' $readResult.Provider $readResult.SchemaDurationMs $database.Tables $true ''; Add-PerformanceRecord $metrics $config.collector.collectorId 'SHARED' $database.DatabaseName 'DatabaseClose' $readResult.Provider $readResult.CloseDurationMs 0 $true '' } catch { $message = $_.Exception.Message; $errors.Add("$($database.DatabaseName): $message"); Add-PerformanceRecord $metrics $config.collector.collectorId 'SHARED' $database.DatabaseName 'SchemaRead' '' $watch.ElapsedMilliseconds 0 $false $message; Write-ReaderLog $logPath 'ERROR' 'SchemaRead' 'SHARED' $database.DatabaseName $message } }
@@ -227,4 +227,19 @@ function Invoke-DreamReader {
     Add-Content -LiteralPath (Join-Path $BaseDirectory 'docs\DREAM_SCHEMA_COMPARISON.md') -Value $comparisonSummary -Encoding utf8
     Write-ReaderLog $logPath 'INFO' 'Session' '' '' "Completed with $($errors.Count) error(s)."
     [pscustomobject]@{ SessionDirectory=$sessionDir; Session=$session; Errors=$errors; LogPath=$logPath }
+}
+
+function Get-ReaderConfig {
+ param([string]$BaseDirectory)
+ $config=Get-Content -Raw -LiteralPath (Join-Path $BaseDirectory 'config/config.json') | ConvertFrom-Json
+ $localPath=Join-Path $BaseDirectory 'config/config.local.json'
+ function Merge-ReaderObject($Target,$Override){
+  foreach($property in $Override.PSObject.Properties){
+   $existing=$Target.PSObject.Properties[$property.Name]
+   if($null -ne $existing -and $existing.Value -is [pscustomobject] -and $property.Value -is [pscustomobject]){Merge-ReaderObject $existing.Value $property.Value}
+   else{$Target | Add-Member -NotePropertyName $property.Name -NotePropertyValue $property.Value -Force}
+  }
+ }
+ if(Test-Path -LiteralPath $localPath){Merge-ReaderObject $config (Get-Content -Raw -LiteralPath $localPath | ConvertFrom-Json)}
+ return $config
 }

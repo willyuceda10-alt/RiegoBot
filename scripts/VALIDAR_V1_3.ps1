@@ -14,3 +14,5 @@ $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $BaseDir
 $report.Checks | Format-Table -AutoSize | Out-Host
 Write-Host "VALIDAR_V1_3: $(if ($report.Passed) {'SAFE'} else {'WARNING'})"
 $report
+
+if (-not $report.Passed) { exit 1 }

@@ -33,3 +33,12 @@ dist/
 .idea/
 Thumbs.db
 .DS_Store
+
+node_modules/
+runtime/
+supabase/.temp/
+supabase/.branches/
+*.local
+
+!.env.example
+!supabase/functions/.env.example

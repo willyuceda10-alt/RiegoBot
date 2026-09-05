@@ -1,13 +1,37 @@
-# RiegoBot / DreamReader 1.3.2-alpha
+# RiegoBot · Semilla Lab
 
-DreamReader is a read-only discovery and schema inventory tool for multiple Dream MDB instances.
+Plataforma de consulta de Dream y gestión de incidencias por WhatsApp con Supabase.
 
-A Collector represents one host or installation. `CollectorId` identifies that collector, `SiteId` identifies the site, and `DreamKey` is the stable identity `${SiteId}-DREAM-${DreamId}`. Adding a site means creating a separate configuration with its own collector and site values.
+## Componentes
+- Recolector local Python + PowerShell/ACE, de solo lectura, con cola persistente.
+- Postgres/RLS, ingesta, reglas, incidencias, fotos privadas, escalamiento y trabajos durables.
+- Webhook de WhatsApp con firma HMAC y simulación sin número real.
+- Panel React para operación, configuración, evidencias, soporte y métricas.
 
-The discovery module searches `Dream*_1.mdb`, extracts the numeric DreamId, and compares it to `config/config.json`. A configured and enabled instance is `CONFIGURED`; an unconfigured file is `DISCOVERED`; a disabled configured entry is `DISABLED`; a configured file that is absent is `UNKNOWN`. Discovered instances are reported only and are not activated.
+## Empezar en local
+```powershell
+npm ci
+npx supabase start
+node scripts/local-demo.mjs
+npx supabase functions serve --env-file supabase/functions/.env.local
+# Otra terminal
+npm run dev -- --port 5178
+```
 
-Run `EJECUTAR_V1_3.cmd`, or run `scripts/INICIAR_V1_3.ps1` after `scripts/VALIDAR_V1_3.ps1`. Results are stored in a new timestamped `output` session. Package the most recent session with `scripts/EMPAQUETAR_RESULTADOS.ps1`.
+Panel: http://127.0.0.1:5178. Las credenciales y pasos de producción están en [Operación Supabase](docs/OPERACION_SUPABASE.md).
 
-`extractionMode` defaults to `DISCOVERY`. `NORMALIZED` only uses evidence-backed mappings. Candidate mappings require the explicit `allowCandidateMappings` switch; their output remains labelled `CANDIDATE` and never represents a confirmed operational state.
+Proyecto remoto previsto: `zdgfjepoptlwjaoxvuju`. Se requiere autenticar la CLI para desplegar. WhatsApp real necesita número Business API y secretos; mientras tanto usar DRY_RUN=true.
 
-This alpha release does not implement realtime polling, WhatsApp, Azure, external APIs, valve control, program changes, MDB writes, or a Windows Service. All connections are opened with `Mode=Read`; schema access uses ADO.NET metadata APIs, and the only query gateway accepts `SELECT` statements.
+## Verificación
+```powershell
+npm test
+npm run build
+python -m unittest discover -s tests -p 'test_*.py'
+npm run test:db
+node tests/api-integration.mjs
+```
+Las pruebas de API necesitan el entorno local y las funciones en ejecución. CI verifica también los tipos de Edge Functions.
+
+## Alcance de los datos
+Hay consultas de eventos, caudal, medidores, fertilización, programas, catálogo y observaciones diarias. Los campos físicos requieren mappings validados. No se infiere estado actual de válvulas, salud del controlador ni ausencia de alarmas a partir de un histórico.
+El lector no escribe MDB ni controla Dream. Los scripts V1.3 se conservan como herramientas de inventario; el recolector continuo se ejecuta con `python -m dreamreader.collector`.

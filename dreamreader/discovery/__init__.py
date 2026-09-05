@@ -14,9 +14,7 @@ def discover_dreams(project_root: Path, config: dict[str, Any]) -> list[dict[str
     root = resolve_path(project_root, config["discovery"]["rootPath"])
     configured = {str(item["dreamId"]): item for item in config.get("dreams", [])}
     result: list[dict[str, Any]] = []
-    if not root.is_dir():
-        return result
-    for path in sorted(root.iterdir()):
+    for path in sorted(root.iterdir()) if root.is_dir() else []:
         if not path.is_file() or not fnmatch.fnmatch(path.name.lower(), config["discovery"]["dreamPattern"].lower()):
             continue
         stem = path.stem
@@ -29,4 +27,9 @@ def discover_dreams(project_root: Path, config: dict[str, Any]) -> list[dict[str
         enabled = item.get("enabled", True)
         site_id = config["collector"]["siteId"]
         result.append({"collectorId": config["collector"]["collectorId"], "siteId": site_id, "dreamKey": f"{site_id}-DREAM-{dream_id}", "dreamId": dream_id, "dreamName": item.get("name", f"Dream {dream_id}"), "databasePath": str(path), "status": "CONFIGURED" if item and enabled else "DISABLED" if item else "DISCOVERED"})
+    found = {r["dreamId"] for r in result}
+    for dream_id, item in configured.items():
+        if dream_id not in found:
+            site_id = config["collector"]["siteId"]
+            result.append({"collectorId": config["collector"]["collectorId"], "siteId": site_id, "dreamKey": f"{site_id}-DREAM-{dream_id}", "dreamId": dream_id, "dreamName": item.get("name", f"Dream {dream_id}"), "databasePath": str(root / f"Dream{dream_id}_1.mdb"), "status": "UNKNOWN" if item.get("enabled", True) else "DISABLED"})
     return result
