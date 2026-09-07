@@ -45,28 +45,28 @@ def mesh():
         body((side*.63, .42, .18), (.11, .14, .12), (238, 206, 166), 1, 28)
         body((side*.66, .42, .27), (.05, .075, .035), (204, 164, 127), 1, 28)
         # Pearl ceramic shoulder shells soften the pipe joints without hiding them.
-        body((side*.60,-.20,.01),(.14,.12,.15),(97,137,80),.9)
-        body((side*.72,-.46,.015),(.12,.17,.13),(223,232,210),.8)
+        body((side*.60,-.20,.01),(.11,.11,.12),(97,137,80),1)
+        body((side*.72,-.46,.015),(.09,.17,.11),(223,232,210),1)
     # Filter housing as torso, with threaded pipe neck and compression rings.
     tube((0,-.10,0),(0,.05,0),.15,(112,131,116))
-    body((0,-.44,0),(.39,.33,.34),(224,231,213),.62)
+    body((0,-.44,0),(.31,.33,.27),(224,231,213),.90)
     for y in (-.14,-.75):
-        tube((0,y-.025,0),(0,y+.025,0),.40,(58,91,62))
-    tube((0,-.44,.33),(0,-.44,.40),.27,(180,164,107))
+        tube((0,y-.025,0),(0,y+.025,0),.32,(58,91,62))
+    tube((0,-.44,.26),(0,-.44,.32),.22,(180,164,107))
     for side in (-1, 1):
         # PE tube limbs, brass unions and rounded 90-degree elbows.
-        tube((side*.39,-.25,0),(side*.72,-.25,0),.105,(47,64,53))
-        tube((side*.49,-.25,0),(side*.59,-.25,0),.14,(188,163,100))
-        body((side*.73,-.27,0),(.13,.13,.13),(64,89, 60),1)
-        tube((side*.73,-.28,0),(side*.73,-.62,0),.105,(58,78,62))
+        tube((side*.24,-.25,0),(side*.72,-.25,0),.085,(47,64,53))
+        tube((side*.49,-.25,0),(side*.59,-.25,0),.11,(188,163,100))
+        body((side*.73,-.27,0),(.10,.11,.11),(64,89,60),1)
+        tube((side*.73,-.28,0),(side*.73,-.62,0),.085,(58,78,62))
         for y in (-.58,):
-            tube((side*.73,y-.035,0),(side*.73,y+.035,0),.13,(125,156, 90))
+            tube((side*.73,y-.035,0),(side*.73,y+.035,0),.105,(125,156,90))
         tube((side*.23,-.75,0),(side*.23,-1.0,0),.095,(69,85,72))
         tube((side*.23,-.89,0),(side*.23,-.84,0),.14,(175,160,109))
-        body((side*.24, -.98, .07), (.22, .21, .28), (153, 68, 58))
+        body((side*.24, -.98, .07), (.16, .22, .24), (153, 68, 58), .72)
     tube((-.73,-.62,0),(-.93,-.62,.04),.09,(184,158,92))
     tube((-.93,-.62,.04),(-.93,-.46,.04),.06,(184,158,92))
-    body((.77, -.61, .08), (.18, .11, .15), (183, 164, 94))
+    body((.77, -.61, .08), (.15, .10, .13), (183, 164, 94), .65)
     body((.98, -.58, .12), (.12, .07, .11), (76, 101, 80))
     # A brass valve wheel sits above the right-hand irrigation fitting.
     tube((.78,-.60,.06),(.78,-.40,.06),.035,(187,163,101))
@@ -76,6 +76,7 @@ def mesh():
 def draw_robot(c, faces, t, bounce, yaw, color, busy):
     def rotate(p):
         x,y,z=p
+        x *= .92
         return (x*math.cos(yaw)+z*math.sin(yaw), y, -x*math.sin(yaw)+z*math.cos(yaw))
     def project(p):
         x,y,z=p
@@ -83,13 +84,13 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         return (210+x*78*f, 125-y*78*f+bounce)
     def pos(p):
         return project(rotate(p))
-    c.create_oval(163, 219, 258, 228, fill="#24352b", outline="")
+    c.create_oval(174, 221, 246, 228, fill="#24352b", outline="")
     # Flexible irrigation hose linking the tank to the brass quick-coupler.
     hose=[]
     for step in range(25):
         q=step/24
-        hose.extend(pos((.38+.48*q, -.53-.30*math.sin(q*math.pi), -.12)))
-    c.create_line(*hose,fill="#263e32",width=7)
+        hose.extend(pos((.26+.60*q, -.53-.30*math.sin(q*math.pi), -.12)))
+    c.create_line(*hose,fill="#263e32",width=5)
     c.create_line(*hose,fill="#66795a",width=3)
     polygons=[]
     for vertices, origin, base in faces:
@@ -169,9 +170,9 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         x,y=pos((side*.23,-1.03,.34))
         c.create_line(x-10,y,x+10,y,fill="#d59675",width=2)
     # Exact company artwork on the service plate, not a reconstructed symbol.
-    x,y=pos((0,-.44,.43))
-    c.create_oval(x-21,y-21,x+21,y+21,fill="#baab79",outline="#dfd5b6",width=.8)
-    c.brand(x,y,39)
+    x,y=pos((0,-.44,.35))
+    c.create_oval(x-17,y-17,x+17,y+17,fill="#baab79",outline="#dfd5b6",width=.8)
+    c.brand(x,y,31)
     # Pressure gauge is a visual design element, not a live measurement.
     gx,gy=pos((-.93,-.37,.15))
     c.create_oval(gx-12,gy-12,gx+12,gy+12,fill="#bbc3b4",outline="#4f6252",width=2)
@@ -187,10 +188,10 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
     c.create_line(wx-8,wy,wx+8,wy,fill="#c6b372",width=1.5)
     c.create_line(wx,wy-3,wx,wy+3,fill="#c6b372",width=1.5)
     # Service screws and a compact tank-level gauge.
-    for dx in (-.35,.35):
+    for dx in (-.19,.19):
         x,y=pos((dx,-.66,.32))
         c.create_oval(x-1.4,y-1.4,x+1.4,y+1.4,fill="#89937d",outline="")
-    x,y=pos((-.34,-.35,.33))
+    x,y=pos((-.27,-.35,.29))
     c.create_rectangle(x-2,y-8,x+2,y+7,fill="#294739",outline="")
     for dy in (-5,0,5):
         c.create_line(x-1,y+dy,x+1,y+dy,fill="#bddb8e",width=1)
