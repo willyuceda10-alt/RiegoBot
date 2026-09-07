@@ -1,4 +1,11 @@
+param([string]$PythonPath = 'python.exe')
 $ErrorActionPreference = 'Stop'
 $base = Split-Path $PSScriptRoot -Parent
-$python = (Get-Command pythonw.exe -ErrorAction Stop).Source
-Start-Process -FilePath $python -ArgumentList '-m dreamreader.mascot' -WorkingDirectory $base -WindowStyle Hidden
+$python = (Get-Command $PythonPath -ErrorAction Stop).Source
+& $python -c 'import tkinter, PIL' 2>$null
+if ($LASTEXITCODE -ne 0) {
+    throw 'Este Python no tiene Tkinter o Pillow. Instala requirements.txt en ese entorno o indica -PythonPath con el Python preparado.'
+}
+$windowless = Join-Path (Split-Path $python -Parent) 'pythonw.exe'
+if (-not (Test-Path -LiteralPath $windowless)) { $windowless = $python }
+Start-Process -FilePath $windowless -ArgumentList '-m dreamreader.mascot' -WorkingDirectory $base -WindowStyle Hidden

@@ -22,16 +22,16 @@ def geometry_builder():
             faces.append(([a,b,c,d], center, color))
             faces.append(([start,a,d,start], center, color))
             faces.append(([end,c,b,end], center, color))
-    def body(center, size, color, power=0.35):
+    def body(center, size, color, power=0.35, resolution=18):
         def signed(v):
             return math.copysign(abs(v)**power, v)
         def point(i, j):
-            a, b = math.pi*i/18-math.pi/2, math.tau*j/36
+            a, b = math.pi*i/resolution-math.pi/2, math.tau*j/(resolution*2)
             return (center[0]+size[0]*signed(math.cos(a))*signed(math.cos(b)),
                     center[1]+size[1]*signed(math.sin(a)),
                     center[2]+size[2]*signed(math.cos(a))*signed(math.sin(b)))
-        for i in range(18):
-            for j in range(36):
+        for i in range(resolution):
+            for j in range(resolution*2):
                 faces.append(([point(i,j), point(i+1,j), point(i+1,j+1), point(i,j+1)], center, color))
     return faces, tube, body
 
@@ -40,30 +40,30 @@ def mesh():
     faces, tube, body = geometry_builder()
     # Rounded retro-anime head and warm face, with sculpted black hair behind it.
     body((0, .48, 0), (.66, .49, .40), (28, 36, 34), 1)
-    body((0, .43, .35), (.58, .42, .13), (247, 218, 180), 1)
+    body((0, .43, .35), (.58, .42, .13), (247, 218, 180), 1, 38)
     for side in (-1, 1):
-        body((side*.63, .42, .18), (.11, .14, .12), (238, 206, 166), 1)
-        body((side*.66, .42, .27), (.05, .075, .035), (204, 164, 127), 1)
+        body((side*.63, .42, .18), (.11, .14, .12), (238, 206, 166), 1, 28)
+        body((side*.66, .42, .27), (.05, .075, .035), (204, 164, 127), 1, 28)
         # Pearl ceramic shoulder shells soften the pipe joints without hiding them.
-        body((side*.60,-.20,.01),(.17,.15,.18),(231,209,177),.9)
-        body((side*.72,-.46,.015),(.13,.17,.14),(231,209,177),.8)
+        body((side*.60,-.20,.01),(.14,.12,.15),(97,137,80),.9)
+        body((side*.72,-.46,.015),(.12,.17,.13),(223,232,210),.8)
     # Filter housing as torso, with threaded pipe neck and compression rings.
     tube((0,-.10,0),(0,.05,0),.15,(112,131,116))
-    tube((0,-.77,0),(0,-.12,0),.40,(221,228,213))
-    for y in (-.12,-.17,-.72,-.77):
-        tube((0,y-.025,0),(0,y+.025,0),.43,(58,91,62))
-    body((0, -.44, .39), (.27, .25, .025), (246, 247, 239))
+    body((0,-.44,0),(.39,.33,.34),(224,231,213),.62)
+    for y in (-.14,-.75):
+        tube((0,y-.025,0),(0,y+.025,0),.40,(58,91,62))
+    tube((0,-.44,.33),(0,-.44,.40),.27,(180,164,107))
     for side in (-1, 1):
         # PE tube limbs, brass unions and rounded 90-degree elbows.
         tube((side*.39,-.25,0),(side*.72,-.25,0),.105,(47,64,53))
         tube((side*.49,-.25,0),(side*.59,-.25,0),.14,(188,163,100))
         body((side*.73,-.27,0),(.13,.13,.13),(64,89, 60),1)
         tube((side*.73,-.28,0),(side*.73,-.62,0),.105,(58,78,62))
-        for y in (-.37,-.58):
+        for y in (-.58,):
             tube((side*.73,y-.035,0),(side*.73,y+.035,0),.13,(125,156, 90))
         tube((side*.23,-.75,0),(side*.23,-1.0,0),.095,(69,85,72))
         tube((side*.23,-.89,0),(side*.23,-.84,0),.14,(175,160,109))
-        body((side*.24, -.98, .07), (.22, .21, .28), (174,  60, 53))
+        body((side*.24, -.98, .07), (.22, .21, .28), (153, 68, 58))
     tube((-.73,-.62,0),(-.93,-.62,.04),.09,(184,158,92))
     tube((-.93,-.62,.04),(-.93,-.46,.04),.06,(184,158,92))
     body((.77, -.61, .08), (.18, .11, .15), (183, 164, 94))
@@ -106,15 +106,34 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         if n[2]<-.1: continue
         light=max(0,-n[0]*.45+n[1]*.55+n[2]*.7)
         gloss=max(0,-n[0]*.25+n[1]*.32+n[2]*.914)**35
-        rgb=tuple(min(255,int(v*(.53+.47*light)+gloss*65)) for v in base)
+        is_skin = base[0] > 200 and base[1] < 220 and base[2] < 190
+        rgb=tuple(min(255,int(v*((.74+.26*light) if is_skin else (.53+.47*light))+gloss*(8 if is_skin else 50))) for v in base)
         polygons.append((center[2], [v for p in pts for v in project(p)], '#%02x%02x%02x'%rgb))
     for _, points, fill in sorted(polygons):
         c.create_polygon(points, fill=fill, outline=fill)
-    # Two swept locks and a curved fringe define the retro-anime silhouette.
-    hair=[(-.62,.64),(-.80,1.14),(-.34,.96),(-.04,1.06),(.36,1.02),(.80,1.17),(.62,.67),(.45,.79),(.14,.86),(-.10,.73),(-.38,.65),(-.29,.83)]
-    c.create_polygon([v for x,y in hair for v in pos((x,y,.48))],fill="#172321")
-    shine=[(-.61,1.02),(-.36,.94),(-.12,.91),(-.33,.86)]
-    c.create_polygon([v for x,y in shine for v in pos((x,y,.49))],fill="#354741")
+    # Curved, asymmetric locks with smaller points and layered highlights.
+    def hair_path(segments, fill):
+        points=[]
+        for a,b,d,e in segments:
+            for step in range(21):
+                q=step/20; u=1-q
+                x=u**3*a[0]+3*u*u*q*b[0]+3*u*q*q*d[0]+q**3*e[0]
+                y=u**3*a[1]+3*u*u*q*b[1]+3*u*q*q*d[1]+q**3*e[1]
+                points.extend(pos((x,y,.48)))
+        c.create_polygon(points,fill=fill)
+    hair_path([
+        ((-.61,.62),(-.67,.80),(-.68,1.02),(-.66,1.10)),
+        ((-.66,1.10),(-.50,.94),(-.38,.96),(-.24,.99)),
+        ((-.24,.99),(.12,1.14),(.35,.99),(.68,1.08)),
+        ((.68,1.08),(.65,.87),(.59,.76),(.52,.70)),
+        ((.52,.70),(.40,.82),(.18,.89),(.08,.88)),
+        ((.08,.88),(-.08,.76),(-.23,.69),(-.36,.68)),
+        ((-.36,.68),(-.35,.77),(-.29,.83),(-.25,.86)),
+        ((-.25,.86),(-.45,.79),(-.56,.68),(-.61,.62))],"#192824")
+    hair_path([
+        ((-.58,1.00),(-.40,.91),(-.32,.95),(-.14,.98)),
+        ((-.14,.98),(.02,1.01),(.13,1.01),(.22,.98)),
+        ((.22,.98),(-.10,.98),(-.37,.85),(-.58,1.00))],"#3b5045")
     # Anime-inspired luminous eyes: angled lids, deep irises and double catchlights.
     for side in (-1,1):
         ex,ey=pos((side*.24,.48,.49))
@@ -151,7 +170,8 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         c.create_line(x-10,y,x+10,y,fill="#d59675",width=2)
     # Exact company artwork on the service plate, not a reconstructed symbol.
     x,y=pos((0,-.44,.43))
-    c.brand(x,y,38)
+    c.create_oval(x-21,y-21,x+21,y+21,fill="#baab79",outline="#dfd5b6",width=.8)
+    c.brand(x,y,39)
     # Pressure gauge is a visual design element, not a live measurement.
     gx,gy=pos((-.93,-.37,.15))
     c.create_oval(gx-12,gy-12,gx+12,gy+12,fill="#bbc3b4",outline="#4f6252",width=2)

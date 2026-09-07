@@ -64,6 +64,9 @@ class Surface:
         # Display the original artwork intact, including its white margin.
         pixels = round(size*self.scale)
         logo = company_logo().resize((pixels, pixels), Image.Resampling.LANCZOS)
+        mask = Image.new("L", (pixels,pixels))
+        ImageDraw.Draw(mask).ellipse((0,0,pixels-1,pixels-1),fill=255)
+        logo.putalpha(mask)
         self.image.alpha_composite(logo, (round((x-size/2)*self.scale), round((y-size/2)*self.scale)))
 
     def finish(self):
