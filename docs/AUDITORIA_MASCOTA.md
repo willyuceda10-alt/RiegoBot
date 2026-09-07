@@ -1,5 +1,9 @@
 # Revisión visual del robot
 
+## Corrección de dirección: personaje robot anime
+
+La preferencia del usuario es conservar el personaje y acercarlo al anime. La estación de riego fue una interpretación incorrecta y deja de ser la presentación activa. Se restaura el cuerpo de personaje con accesorios de riego y logo original, y se añaden ojos expresivos con iris y reflejos, parpadeo, casco redondeado y corona mecha dorada. Se recupera el movimiento suave y la mirada hacia el cursor. Los controles siguen integrados en una única ventana.
+
 ## Dirección actual: estación de riego
 
 La silueta humanoide, el visor con ojos y el rebote sugerían un juguete. La nueva dirección presenta un cabezal de riego compacto: tubería continua, filtro, uniones, manómetro, electroválvula y caja electrónica. El logo original aparece en la placa del filtro. Se elimina la cara y el rebote; la actividad se muestra en el módulo de sincronización. El manómetro es decorativo y carece de una lectura numérica que pueda confundirse con una medición real.

@@ -39,9 +39,9 @@ def geometry_builder():
 def mesh():
     faces, tube, body = geometry_builder()
     # Helmet and dark inset display; separate mechanical torso and limbs.
-    body((0, .56, 0), (.72, .43, .39), (235, 239, 215), .46)
-    body((0, .57, .37), (.63, .34, .085), (70, 111, 45), .43)
-    body((0, .57, .45), (.56, .265, .06), (19,  40, 35), .50)
+    body((0, .56, 0), (.76, .46, .40), (235, 239, 215), .70)
+    body((0, .57, .37), (.67, .35, .085), (70, 111, 45), .43)
+    body((0, .57, .45), (.60, .28, .06), (19,  40, 35), .50)
     body((0, .94, .04), (.39, .045, .30), (115, 164, 64), .5)
     for side in (-1, 1):
         body((side*.76, .54, 0), (.08, .23, .23), (86, 128, 52), .55)
@@ -109,17 +109,25 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         polygons.append((center[2], [v for p in pts for v in project(p)], '#%02x%02x%02x'%rgb))
     for _, points, fill in sorted(polygons):
         c.create_polygon(points, fill=fill, outline=fill)
-    # Signal antenna with a solar-yellow beacon.
+    # Compact mecha crown, echoing Camposol's sunlight accent.
     ax,ay=pos((0,1.0,0))
-    c.create_line(ax,ay,ax,ay-15,fill="#a99a62",width=4)
-    c.create_oval(ax-6,ay-23,ax+6,ay-11,fill="#ffce28",outline="#ecdf96",width=2)
-    for x in (-.25,.25):
-        ex,ey=pos((x,.61,.53))
+    c.create_polygon([ax-4,ay+2,ax-22,ay-13,ax-18,ay+4,ax,ay+11,ax+18,ay+4,ax+22,ay-13,ax+4,ay+2],fill="#c6b572",outline="")
+    c.create_polygon([ax,ay-4,ax+6,ay+3,ax,ay+9,ax-6,ay+3],fill="#f2ce55",outline="")
+    # Anime-inspired luminous eyes: angled lids, deep irises and double catchlights.
+    for side in (-1,1):
+        ex,ey=pos((side*.26,.61,.53))
         if t%4.8>4.62:
-            c.create_line(ex-8,ey,ex+8,ey,fill="#d7f7a9",width=3)
+            c.create_arc(ex-10,ey-3,ex+10,ey+8,start=10,extent=160,style="arc",outline="#bde8bb",width=2.5)
         else:
-            c.create_rectangle(ex-8,ey-9,ex+8,ey+9,fill="#caee9d",outline="")
-            c.create_rectangle(ex-3,ey-6,ex+2,ey-1,fill="#f9ffe8",outline="")
+            c.create_polygon([ex-12,ey-11,ex+10,ey-14,ex+12,ey+8,ex+6,ey+14,ex-7,ey+13,ex-12,ey+5],fill="#d7eee1")
+            c.create_oval(ex-7,ey-10,ex+8,ey+12,fill="#5ebea0",outline="")
+            c.create_oval(ex-4,ey-8,ex+5,ey+9,fill="#1c6050",outline="")
+            c.create_oval(ex-3,ey-7,ex+3,ey+7,fill="#102e29",outline="")
+            c.create_oval(ex-6,ey-10,ex+1,ey-3,fill="#f6fff1",outline="")
+            c.create_oval(ex+3,ey+5,ex+6,ey+8,fill="#c7ffdf",outline="")
+            c.create_line(ex-13,ey-11,ex+11,ey-14,fill="#83ccb1",width=2)
+        cx,cy=pos((side*.48,.39,.51))
+        c.create_line(cx-4,cy,cx+3,cy-1,fill="#bdad67",width=1.5)
     x,y=pos((0,.42,.53))
     c.create_arc(x-10,y-5,x+10,y+7,start=190,extent=160,style="arc",outline="#caee9d",width=2)
     # Curved glass reflection and brushed helmet trim.
