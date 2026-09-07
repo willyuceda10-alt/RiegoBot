@@ -2,6 +2,13 @@
 from PIL import Image, ImageDraw, ImageFont
 from functools import lru_cache
 from .robot import mesh, draw_robot
+from . import PROJECT_ROOT
+
+
+@lru_cache(maxsize=1)
+def company_logo():
+    with Image.open(PROJECT_ROOT / "assets/branding/camposol-original.jpg") as source:
+        return source.convert("RGBA")
 
 
 @lru_cache(maxsize=1)
@@ -52,6 +59,12 @@ class Surface:
         except OSError:
             face = ImageFont.load_default(size=round(font[1]*self.scale*1.25))
         self.pen.text(self.coords((x,y)), text, fill=fill, font=face, anchor="mm")
+
+    def brand(self, x, y, size):
+        # Display the original artwork intact, including its white margin.
+        pixels = round(size*self.scale)
+        logo = company_logo().resize((pixels, pixels), Image.Resampling.LANCZOS)
+        self.image.alpha_composite(logo, (round((x-size/2)*self.scale), round((y-size/2)*self.scale)))
 
     def finish(self):
         return self.image.resize(self.size, Image.Resampling.LANCZOS)

@@ -4,6 +4,24 @@ import math
 
 def mesh():
     faces = []
+    def tube(start, end, radius, color):
+        axis = [end[k]-start[k] for k in range(3)]
+        length = math.sqrt(sum(v*v for v in axis))
+        axis = [v/length for v in axis]
+        ref = (0, 0, 1) if abs(axis[2]) < .9 else (0, 1, 0)
+        u = [axis[1]*ref[2]-axis[2]*ref[1], axis[2]*ref[0]-axis[0]*ref[2], axis[0]*ref[1]-axis[1]*ref[0]]
+        norm = math.sqrt(sum(v*v for v in u))
+        u = [v/norm for v in u]
+        v = [axis[1]*u[2]-axis[2]*u[1], axis[2]*u[0]-axis[0]*u[2], axis[0]*u[1]-axis[1]*u[0]]
+        center = tuple((start[k]+end[k])/2 for k in range(3))
+        def ring(p, j):
+            angle = j*math.tau/32
+            return tuple(p[k]+radius*(u[k]*math.cos(angle)+v[k]*math.sin(angle)) for k in range(3))
+        for j in range(32):
+            a,b,c,d=ring(start,j),ring(end,j),ring(end,j+1),ring(start,j+1)
+            faces.append(([a,b,c,d], center, color))
+            faces.append(([start,a,d,start], center, color))
+            faces.append(([end,c,b,end], center, color))
     def body(center, size, color, power=0.35):
         def signed(v):
             return math.copysign(abs(v)**power, v)
@@ -23,17 +41,29 @@ def mesh():
     for side in (-1, 1):
         body((side*.76, .54, 0), (.08, .23, .23), (86, 128, 52), .55)
         body((side*.82, .54, .03), (.035, .12, .15), (190, 173, 108), .6)
-    body((0, .02, 0), (.18, .12, .21), (164, 173, 158))
-    body((0, -.42, 0), (.43, .34, .30), (231, 236, 219))
-    body((0, -.43, .30), (.30, .23, .035), (91, 139, 51))
+    # Filter housing as torso, with threaded pipe neck and compression rings.
+    tube((0,-.10,0),(0,.14,0),.15,(112,131,116))
+    tube((0,-.77,0),(0,-.12,0),.40,(221,228,213))
+    for y in (-.12,-.17,-.72,-.77):
+        tube((0,y-.025,0),(0,y+.025,0),.43,(58,91,62))
+    body((0, -.44, .39), (.27, .25, .025), (246, 247, 239))
     for side in (-1, 1):
-        body((side*.59, -.23, 0), (.12, .14, .17), (180, 162, 92), 1)
-        body((side*.71, -.42, 0), (.12, .21, .12), (109, 153, 60))
-        body((side*.23, -.87, 0), (.12, .11, .14), (119, 133, 117))
+        # PE tube limbs, brass unions and rounded 90-degree elbows.
+        tube((side*.39,-.25,0),(side*.72,-.25,0),.105,(47,64,53))
+        tube((side*.49,-.25,0),(side*.59,-.25,0),.14,(188,163,100))
+        body((side*.73,-.27,0),(.13,.13,.13),(64,89, 60),1)
+        tube((side*.73,-.28,0),(side*.73,-.62,0),.105,(58,78,62))
+        for y in (-.37,-.58):
+            tube((side*.73,y-.035,0),(side*.73,y+.035,0),.13,(125,156, 90))
+        tube((side*.23,-.75,0),(side*.23,-1.0,0),.095,(69,85,72))
+        tube((side*.23,-.89,0),(side*.23,-.84,0),.14,(175,160,109))
         body((side*.24, -1.03, .07), (.20, .10, .26), (49, 79, 54))
-    body((-.73, -.67, .04), (.15, .10, .16), (211, 224, 201))
+    tube((-.73,-.62,0),(-.93,-.62,.04),.09,(184,158,92))
+    tube((-.93,-.62,.04),(-.93,-.46,.04),.06,(184,158,92))
     body((.77, -.61, .08), (.18, .11, .15), (183, 164, 94))
     body((.98, -.58, .12), (.12, .07, .11), (76, 101, 80))
+    # A brass valve wheel sits above the right-hand irrigation fitting.
+    tube((.78,-.60,.06),(.78,-.40,.06),.035,(187,163,101))
     return faces
 
 
@@ -95,13 +125,23 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         c.create_oval(x-2,y-2,x+2,y+2,fill="#8d9277",outline="")
         x,y=pos((side*.23,-1.03,.34))
         c.create_line(x-10,y,x+10,y,fill="#93a281",width=2)
-    # Chest seal: rising sun and field lines reference the supplied identity.
-    x,y=pos((0,-.40,.36))
-    c.create_oval(x-13,y-14,x+13,y+12,fill="#669e3a",outline="#c3af70",width=2)
-    c.create_arc(x-6,y-10,x+6,y+2,start=0,extent=180,fill="#ffce28",outline="")
-    for offset in (-7,0,7):
-        c.create_line(x+offset,y+8,x+offset*.3,y-1,fill="#e4efd1",width=1)
-    c.create_text(x,y+23,text="RIEGO",fill="#345836",font=("Segoe UI",6,"bold"))
+    # Exact company artwork on the service plate, not a reconstructed symbol.
+    x,y=pos((0,-.44,.43))
+    c.brand(x,y,38)
+    # Pressure gauge is a visual design element, not a live measurement.
+    gx,gy=pos((-.93,-.37,.15))
+    c.create_oval(gx-12,gy-12,gx+12,gy+12,fill="#bbc3b4",outline="#4f6252",width=2)
+    c.create_oval(gx-9,gy-9,gx+9,gy+9,fill="#f3f2df",outline="")
+    for index in range(7):
+        angle=math.radians(145+index*40)
+        c.create_line(gx+math.cos(angle)*6,gy+math.sin(angle)*6,gx+math.cos(angle)*8,gy+math.sin(angle)*8,fill="#5d715b",width=.7)
+    c.create_line(gx,gy,gx-4,gy-4,fill="#b79a4b",width=1.4)
+    c.create_oval(gx-1,gy-1,gx+1,gy+1,fill="#465b44",outline="")
+    # Quarter-turn handwheel, with a hollow hub and mechanical spokes.
+    wx,wy=pos((.78,-.39,.08))
+    c.create_oval(wx-10,wy-4,wx+10,wy+4,outline="#a99455",width=2)
+    c.create_line(wx-8,wy,wx+8,wy,fill="#c6b372",width=1.5)
+    c.create_line(wx,wy-3,wx,wy+3,fill="#c6b372",width=1.5)
     # Service screws and a compact tank-level gauge.
     for dx in (-.35,.35):
         x,y=pos((dx,-.66,.32))

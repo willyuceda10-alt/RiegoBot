@@ -10,8 +10,8 @@ import tkinter as tk
 
 from . import PROJECT_ROOT
 from .config import load_config
-from .robot_surface import robot_frame
-from PIL import ImageTk
+from .robot_surface import robot_frame, company_logo
+from PIL import ImageTk, Image
 
 BG = "#142d29"
 KEY = "#ff00ff"
@@ -41,7 +41,14 @@ class CompanionView:
         self.canvas.bind("<Button-3>", lambda e: self.show_panel())
         root.bind("<Escape>", lambda e: self.collapse())
         self.controls = tk.Frame(root, bg=BG, padx=20, pady=14)
-        tk.Label(self.controls, text="RiegoBot / Campo", bg=BG, fg="#c7edb6", font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        header = tk.Frame(self.controls, bg=BG)
+        header.pack(fill="x")
+        self.logo_image = ImageTk.PhotoImage(company_logo().resize((48,48), Image.Resampling.LANCZOS))
+        tk.Label(header, image=self.logo_image, bg=BG, bd=0).pack(side="left", padx=(0,12))
+        titles = tk.Frame(header, bg=BG)
+        titles.pack(side="left")
+        tk.Label(titles, text="RiegoBot", bg=BG, fg="#e4eed8", font=("Segoe UI",16,"bold")).pack(anchor="w")
+        tk.Label(titles, text="Monitoreo de riego · Camposol", bg=BG, fg="#aabd9e", font=("Segoe UI",9)).pack(anchor="w")
         tk.Label(self.controls, textvariable=self.state_var, bg=BG, fg="white", wraplength=375, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=(8, 5))
         tk.Label(self.controls, textvariable=self.info_var, bg=BG, fg="#a6bdb3", justify="left", font=("Segoe UI", 9)).pack(anchor="w")
         row = tk.Frame(self.controls, bg=BG)
@@ -68,7 +75,7 @@ class CompanionView:
         return b
 
     def resize(self):
-        height = 280 if not self.expanded else (690 if self.page else 505)
+        height = 280 if not self.expanded else (715 if self.page else 530)
         self.root.geometry(f"420x{height}")
         self.root.update_idletasks()
         x = max(0, min(self.root.winfo_x(), self.root.winfo_screenwidth()-420))
