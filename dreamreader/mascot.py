@@ -16,9 +16,10 @@ from tkinter import messagebox
 
 from . import PROJECT_ROOT
 from .config import load_config
+from .mascot_view import CompanionView
 
 
-class Mascot:
+class Mascot(CompanionView):
     def __init__(self, root: tk.Tk):
         self.root = root
         self.events = queue.Queue()
@@ -30,72 +31,8 @@ class Mascot:
         self.status = "Listo para configurar"
         self.color = "#82978e"
         self.drag = None
-        root.title("RiegoBot · Mascota")
-        root.overrideredirect(True)
-        root.attributes("-topmost", True)
-        root.configure(bg="#ff00ff")
-        if sys.platform == "win32":
-            root.wm_attributes("-transparentcolor", "#ff00ff")
-        root.geometry(f"190x210+{root.winfo_screenwidth()-230}+{root.winfo_screenheight()-310}")
-        self.canvas = tk.Canvas(root, width=190, height=210, bg="#ff00ff", highlightthickness=0)
-        self.canvas.pack()
-        self.canvas.bind("<ButtonPress-1>", self.press)
-        self.canvas.bind("<B1-Motion>", self.move)
-        self.canvas.bind("<ButtonRelease-1>", self.release)
-        self.canvas.bind("<Button-3>", lambda e: self.show_panel())
-        self.panel = tk.Toplevel(root)
-        self.panel.title("RiegoBot · Recolector Dream")
-        self.panel.geometry("440x490")
-        self.panel.configure(bg="#f4f7f2")
-        self.panel.protocol("WM_DELETE_WINDOW", self.panel.withdraw)
-        self.label("TU ASISTENTE DE RIEGO", 10, "#60766b").pack(anchor="w", padx=28, pady=(26, 5))
-        self.label("Dream, acompañado.", 23, "#173f30").pack(anchor="w", padx=28)
-        self.state_var = tk.StringVar(value=self.status)
-        tk.Label(self.panel, textvariable=self.state_var, font=("Segoe UI", 13, "bold"), bg="#f4f7f2", fg="#173f30", wraplength=380).pack(anchor="w", padx=28, pady=(22, 10))
-        self.info_var = tk.StringVar()
-        tk.Label(self.panel, textvariable=self.info_var, justify="left", wraplength=380, bg="#f4f7f2", fg="#53665a", font=("Segoe UI", 10)).pack(anchor="w", padx=28)
-        controls = tk.Frame(self.panel, bg="#f4f7f2")
-        controls.pack(fill="x", padx=28, pady=20)
-        for text, action in [("Iniciar", self.start), ("Pausar", self.pause), ("Sincronizar", self.once)]:
-            tk.Button(controls, text=text, command=action, bg="#1e6248", fg="white", relief="flat", padx=12, pady=9).pack(side="left", padx=(0, 8))
-        for text, action in [("Abrir configuración local", self.config), ("Ver registro de actividad", self.logs), ("Ocultar controles", self.panel.withdraw), ("Salir de la mascota", self.close)]:
-            tk.Button(self.panel, text=text, command=action, bg="#f4f7f2", fg="#1e6248", relief="flat", anchor="w").pack(fill="x", padx=25, pady=2)
-        self.label("Solo lectura · No acciona equipos", 9, "#60766b").pack(anchor="w", padx=28, pady=14)
-        self.draw()
+        self.setup_view(root)
         self.tick()
-
-    def label(self, text, size, color):
-        return tk.Label(self.panel, text=text, font=("Segoe UI", size), bg="#f4f7f2", fg=color)
-
-    def draw(self):
-        c = self.canvas
-        c.delete("all")
-        c.create_oval(42, 157, 150, 176, fill="#b7cabe", outline="")
-        c.create_polygon(94, 22, 58, 72, 40, 113, 46, 146, 69, 164, 114, 164, 143, 145, 151, 114, 135, 76, fill="#267754", smooth=True, outline="#174a35", width=3)
-        c.create_oval(58, 79, 132, 139, fill="#e5f3dd", outline="")
-        c.create_oval(75, 96, 82, 106, fill="#173f30", outline="")
-        c.create_oval(109, 96, 116, 106, fill="#173f30", outline="")
-        c.create_arc(82, 103, 110, 123, start=190, extent=160, style="arc", outline="#173f30", width=3)
-        c.create_oval(97, 23, 125, 41, fill="#a6ce73", outline="")
-        c.create_oval(139, 142, 157, 160, fill=self.color, outline="#f4f7f2", width=3)
-        c.create_text(95, 191, text="RiegoBot · clic para abrir", fill="#173f30", font=("Segoe UI", 9, "bold"))
-
-    def press(self, e):
-        self.drag = (e.x_root, e.y_root, self.root.winfo_x(), self.root.winfo_y())
-
-    def move(self, e):
-        if self.drag:
-            x, y, rx, ry = self.drag
-            self.root.geometry(f"+{max(0, min(self.root.winfo_screenwidth()-190, rx+e.x_root-x))}+{max(0, min(self.root.winfo_screenheight()-210, ry+e.y_root-y))}")
-
-    def release(self, e):
-        if self.drag and abs(e.x_root-self.drag[0])+abs(e.y_root-self.drag[1]) < 6:
-            self.show_panel()
-        self.drag = None
-
-    def show_panel(self):
-        self.panel.deiconify()
-        self.panel.lift()
 
     def start(self):
         if not self.closing:
@@ -114,7 +51,7 @@ class Mascot:
             if not cfg.get("readOnly"):
                 raise ValueError("Activa readOnly en la configuración.")
             if not os.environ.get("RIEGOBOT_COLLECTOR_TOKEN"):
-                raise ValueError("Falta RIEGOBOT_COLLECTOR_TOKEN. Configúralo en Windows y vuelve a abrir la mascota.")
+                raise ValueError("Falta el token del recolector. Agrégalo en Ajustes.")
         except Exception as exc:
             self.running = False
             self.set_status(str(exc), "#c36a47")
@@ -168,20 +105,8 @@ class Mascot:
                     pending = str(db.execute("SELECT count(*) FROM outbox").fetchone()[0])
             except sqlite3.Error:
                 pending = "Consultando…"
-        self.info_var.set(f"Último ciclo correcto: {self.last_success}\nLotes pendientes: {pending}\nAutomático: {'activo' if self.running else 'pausado'}\nEl estado corresponde al recolector, no a las válvulas.")
+        self.info_var.set(f"Último envío: {self.last_success}\nLotes pendientes: {pending} · {'Automático' if self.running else 'Pausado'}")
         self.root.after(1000, self.tick)
-
-    def config(self):
-        path = PROJECT_ROOT / "config/config.local.json"
-        if not path.exists():
-            path.write_text('{}\n', encoding="utf-8")
-        os.startfile(str(path))
-
-    def logs(self):
-        path = PROJECT_ROOT / "runtime/mascot.log"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.touch(exist_ok=True)
-        os.startfile(str(path))
 
     def close(self):
         self.running = False
