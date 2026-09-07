@@ -1,5 +1,11 @@
 # Revisión visual del robot
 
+## Refinamiento del personaje anime
+
+Se detectó un cuello excesivamente largo, ojos con esquinas duras, una cresta plana y transiciones rígidas en brazos y pies. Se compactó la silueta, se aumentó la resolución de las superficies curvas, se moderaron los reflejos y se añadieron piezas curvas en hombros y antebrazos. Los ojos usan contornos Bézier suaves. La cresta es más pequeña y tiene planos de luz y sombra.
+
+Se verificaron tres orientaciones, los ojos abiertos y cerrados, el indicador de sincronización y el despliegue de ajustes y actividad. El logo y el flujo del recolector permanecen intactos. La vista previa está en `runtime/anime-refined.png`.
+
 ## Corrección de dirección: personaje robot anime
 
 La preferencia del usuario es conservar el personaje y acercarlo al anime. La estación de riego fue una interpretación incorrecta y deja de ser la presentación activa. Se restaura el cuerpo de personaje con accesorios de riego y logo original, y se añaden ojos expresivos con iris y reflejos, parpadeo, casco redondeado y corona mecha dorada. Se recupera el movimiento suave y la mirada hacia el cursor. Los controles siguen integrados en una única ventana.

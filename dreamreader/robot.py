@@ -26,12 +26,12 @@ def geometry_builder():
         def signed(v):
             return math.copysign(abs(v)**power, v)
         def point(i, j):
-            a, b = math.pi*i/12-math.pi/2, math.tau*j/24
+            a, b = math.pi*i/18-math.pi/2, math.tau*j/36
             return (center[0]+size[0]*signed(math.cos(a))*signed(math.cos(b)),
                     center[1]+size[1]*signed(math.sin(a)),
                     center[2]+size[2]*signed(math.cos(a))*signed(math.sin(b)))
-        for i in range(12):
-            for j in range(24):
+        for i in range(18):
+            for j in range(36):
                 faces.append(([point(i,j), point(i+1,j), point(i+1,j+1), point(i,j+1)], center, color))
     return faces, tube, body
 
@@ -39,15 +39,18 @@ def geometry_builder():
 def mesh():
     faces, tube, body = geometry_builder()
     # Helmet and dark inset display; separate mechanical torso and limbs.
-    body((0, .56, 0), (.76, .46, .40), (235, 239, 215), .70)
-    body((0, .57, .37), (.67, .35, .085), (70, 111, 45), .43)
-    body((0, .57, .45), (.60, .28, .06), (19,  40, 35), .50)
-    body((0, .94, .04), (.39, .045, .30), (115, 164, 64), .5)
+    body((0, .46, 0), (.76, .44, .40), (232, 237, 222), .70)
+    body((0, .47, .37), (.67, .35, .085), (74, 111, 58), .43)
+    body((0, .47, .45), (.60, .28, .06), (24, 43, 38), .50)
+    body((0, .84, .04), (.39, .045, .30), (115, 164, 64), .5)
     for side in (-1, 1):
-        body((side*.76, .54, 0), (.08, .23, .23), (86, 128, 52), .55)
-        body((side*.82, .54, .03), (.035, .12, .15), (190, 173, 108), .6)
+        body((side*.76, .44, 0), (.08, .23, .23), (86, 128, 52), .55)
+        body((side*.82, .44, .03), (.035, .12, .15), (190, 173, 108), .6)
+        # Pearl ceramic shoulder shells soften the pipe joints without hiding them.
+        body((side*.60,-.20,.01),(.17,.15,.18),(225,232,211),.7)
+        body((side*.72,-.46,.015),(.13,.17,.14),(210,222,196),.6)
     # Filter housing as torso, with threaded pipe neck and compression rings.
-    tube((0,-.10,0),(0,.14,0),.15,(112,131,116))
+    tube((0,-.10,0),(0,.05,0),.15,(112,131,116))
     tube((0,-.77,0),(0,-.12,0),.40,(221,228,213))
     for y in (-.12,-.17,-.72,-.77):
         tube((0,y-.025,0),(0,y+.025,0),.43,(58,91,62))
@@ -62,7 +65,7 @@ def mesh():
             tube((side*.73,y-.035,0),(side*.73,y+.035,0),.13,(125,156, 90))
         tube((side*.23,-.75,0),(side*.23,-1.0,0),.095,(69,85,72))
         tube((side*.23,-.89,0),(side*.23,-.84,0),.14,(175,160,109))
-        body((side*.24, -1.03, .07), (.20, .10, .26), (49, 79, 54))
+        body((side*.24, -1.03, .07), (.22, .12, .27), (60, 84, 64))
     tube((-.73,-.62,0),(-.93,-.62,.04),.09,(184,158,92))
     tube((-.93,-.62,.04),(-.93,-.46,.04),.06,(184,158,92))
     body((.77, -.61, .08), (.18, .11, .15), (183, 164, 94))
@@ -82,7 +85,7 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         return (210+x*78*f, 125-y*78*f+bounce)
     def pos(p):
         return project(rotate(p))
-    c.create_oval(155, 216, 266, 229, fill="#24352b", outline="")
+    c.create_oval(163, 219, 258, 228, fill="#24352b", outline="")
     # Flexible irrigation hose linking the tank to the brass quick-coupler.
     hose=[]
     for step in range(25):
@@ -105,36 +108,47 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         if n[2]<-.1: continue
         light=max(0,-n[0]*.45+n[1]*.55+n[2]*.7)
         gloss=max(0,-n[0]*.25+n[1]*.32+n[2]*.914)**35
-        rgb=tuple(min(255,int(v*(.45+.55*light)+gloss*90)) for v in base)
+        rgb=tuple(min(255,int(v*(.53+.47*light)+gloss*65)) for v in base)
         polygons.append((center[2], [v for p in pts for v in project(p)], '#%02x%02x%02x'%rgb))
     for _, points, fill in sorted(polygons):
         c.create_polygon(points, fill=fill, outline=fill)
     # Compact mecha crown, echoing Camposol's sunlight accent.
-    ax,ay=pos((0,1.0,0))
-    c.create_polygon([ax-4,ay+2,ax-22,ay-13,ax-18,ay+4,ax,ay+11,ax+18,ay+4,ax+22,ay-13,ax+4,ay+2],fill="#c6b572",outline="")
+    ax,ay=pos((0,.90,0))
+    c.create_polygon([ax-4,ay+2,ax-19,ay-9,ax-18,ay+4,ax,ay+11,ax+18,ay+4,ax+19,ay-9,ax+4,ay+2],fill="#c6b572",outline="")
     c.create_polygon([ax,ay-4,ax+6,ay+3,ax,ay+9,ax-6,ay+3],fill="#f2ce55",outline="")
+    c.create_polygon([ax-4,ay+2,ax-19,ay-9,ax-13,ay+3,ax,ay+8],fill="#e1d5a5")
+    c.create_polygon([ax+4,ay+2,ax+19,ay-9,ax+13,ay+3,ax,ay+8],fill="#a28c4c")
     # Anime-inspired luminous eyes: angled lids, deep irises and double catchlights.
     for side in (-1,1):
-        ex,ey=pos((side*.26,.61,.53))
+        ex,ey=pos((side*.26,.51,.53))
         if t%4.8>4.62:
             c.create_arc(ex-10,ey-3,ex+10,ey+8,start=10,extent=160,style="arc",outline="#bde8bb",width=2.5)
         else:
-            c.create_polygon([ex-12,ey-11,ex+10,ey-14,ex+12,ey+8,ex+6,ey+14,ex-7,ey+13,ex-12,ey+5],fill="#d7eee1")
+            # Smooth almond outline, sampled as cubic curves at display resolution.
+            contour=[]
+            def curve(a,b,d,e):
+                for index in range(17):
+                    q=index/16; v=1-q
+                    contour.extend((ex+v*v*v*a[0]+3*v*v*q*b[0]+3*v*q*q*d[0]+q*q*q*e[0], ey+v*v*v*a[1]+3*v*v*q*b[1]+3*v*q*q*d[1]+q*q*q*e[1]))
+            curve((-12,-7),(-8,-15),(8,-15),(12,-9))
+            curve((12,-9),(15,3),(10,14),(2,14))
+            curve((2,14),(-9,15),(-14,6),(-12,-7))
+            c.create_polygon(contour,fill="#dbeee2")
             c.create_oval(ex-7,ey-10,ex+8,ey+12,fill="#5ebea0",outline="")
             c.create_oval(ex-4,ey-8,ex+5,ey+9,fill="#1c6050",outline="")
             c.create_oval(ex-3,ey-7,ex+3,ey+7,fill="#102e29",outline="")
             c.create_oval(ex-6,ey-10,ex+1,ey-3,fill="#f6fff1",outline="")
             c.create_oval(ex+3,ey+5,ex+6,ey+8,fill="#c7ffdf",outline="")
-            c.create_line(ex-13,ey-11,ex+11,ey-14,fill="#83ccb1",width=2)
-        cx,cy=pos((side*.48,.39,.51))
+            c.create_arc(ex-12,ey-15,ex+12,ey-1,start=15,extent=150,style="arc",outline="#9ecdb7",width=1.4)
+        cx,cy=pos((side*.48,.29,.51))
         c.create_line(cx-4,cy,cx+3,cy-1,fill="#bdad67",width=1.5)
-    x,y=pos((0,.42,.53))
+    x,y=pos((0,.32,.53))
     c.create_arc(x-10,y-5,x+10,y+7,start=190,extent=160,style="arc",outline="#caee9d",width=2)
     # Curved glass reflection and brushed helmet trim.
-    x,y=pos((0,.79,.53))
+    x,y=pos((0,.69,.53))
     c.create_line(x-28,y+2,x-8,y-2,x+20,y-1,fill="#6c9182",width=1)
     for side in (-1,1):
-        x,y=pos((side*.62,.34,.38))
+        x,y=pos((side*.62,.24,.38))
         c.create_oval(x-2,y-2,x+2,y+2,fill="#8d9277",outline="")
         x,y=pos((side*.23,-1.03,.34))
         c.create_line(x-10,y,x+10,y,fill="#93a281",width=2)
@@ -163,7 +177,7 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
     c.create_rectangle(x-2,y-8,x+2,y+7,fill="#294739",outline="")
     for dy in (-5,0,5):
         c.create_line(x-1,y+dy,x+1,y+dy,fill="#bddb8e",width=1)
-    x,y=pos((.58,.83,.38))
+    x,y=pos((.58,.73,.38))
     c.create_oval(x-3,y-3,x+3,y+3,fill=color,outline="")
     # Nozzle perforations and animated water pulses during synchronization.
     x,y=pos((1.1,-.58,.22))
