@@ -10,7 +10,8 @@ import tkinter as tk
 
 from . import PROJECT_ROOT
 from .config import load_config
-from .robot import mesh, draw_robot
+from .robot_surface import robot_frame
+from PIL import ImageTk
 
 BG = "#142d29"
 KEY = "#ff00ff"
@@ -40,25 +41,29 @@ class CompanionView:
         self.canvas.bind("<Button-3>", lambda e: self.show_panel())
         root.bind("<Escape>", lambda e: self.collapse())
         self.controls = tk.Frame(root, bg=BG, padx=20, pady=14)
-        tk.Label(self.controls, text="R I E G O B O T", bg=BG, fg="#c7edb6", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(self.controls, text="RiegoBot / Campo", bg=BG, fg="#c7edb6", font=("Segoe UI", 16, "bold")).pack(anchor="w")
         tk.Label(self.controls, textvariable=self.state_var, bg=BG, fg="white", wraplength=375, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=(8, 5))
         tk.Label(self.controls, textvariable=self.info_var, bg=BG, fg="#a6bdb3", justify="left", font=("Segoe UI", 9)).pack(anchor="w")
         row = tk.Frame(self.controls, bg=BG)
         row.pack(fill="x", pady=10)
         self.action_buttons = []
         for label, action in [("▶ Iniciar", self.start), ("Ⅱ Pausar", self.pause), ("↻ Sincronizar", self.once)]:
-            self.action_buttons.append(self.button(row, label, action, side="left", accent=True))
+            self.action_buttons.append(self.button(row, label, action, side="left", accent=(label == "▶ Iniciar")))
         nav = tk.Frame(self.controls, bg=BG)
         nav.pack(fill="x")
         for label, action in [("Ajustes", self.config), ("Actividad", self.logs), ("Ocultar", self.collapse), ("Salir", self.close)]:
             self.button(nav, label, action, side="left")
         self.content = tk.Frame(self.controls, bg=BG)
         self.content.pack(fill="both", expand=True)
-        self.mesh = mesh()
+        self.frame_key = None
         self.animate()
 
     def button(self, parent, label, action, side="top", accent=False):
         b = tk.Button(parent, text=label, command=action, font=("Segoe UI", 9), bg="#b6df93" if accent else BG, fg="#142d29" if accent else "#c6dacf", activebackground="#d3edbd", relief="flat", bd=0, padx=10, pady=7, cursor="hand2")
+        base = b.cget("bg")
+        b.configure(highlightthickness=1, highlightbackground=base, highlightcolor="#d2c28d", takefocus=True)
+        b.bind("<Enter>", lambda e: b.configure(bg="#c9e6af" if accent else "#294a3d"))
+        b.bind("<Leave>", lambda e: b.configure(bg=base))
         b.pack(side=side, padx=(0, 5), pady=2)
         return b
 
@@ -108,7 +113,11 @@ class CompanionView:
         yaw = math.sin(t*0.65)*0.14
         mouse_x = max(-1, min(1, (self.root.winfo_pointerx()-self.root.winfo_rootx()-210)/210))
         yaw += mouse_x*0.10
-        draw_robot(c, self.mesh, t, bounce, yaw, self.color, self.busy)
+        frame_key = (round(yaw/0.08)*0.08, t%4.8>4.62, int(t*4)%4 if self.busy else 0, self.color, self.busy)
+        if frame_key != self.frame_key:
+            self.robot_image = ImageTk.PhotoImage(robot_frame(*frame_key))
+            self.frame_key = frame_key
+        c.create_image(0, bounce, anchor="nw", image=self.robot_image)
         caption = "Sincronizando…" if self.busy else ("Automático activo" if self.running else "Toca para ver controles")
         c.create_rectangle(109, 239, 311, 267, fill=BG, outline="")
         c.create_text(210, 253, text=caption, fill="#e5f3de", font=("Segoe UI", 10))
