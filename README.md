@@ -2,13 +2,26 @@
 
 Plataforma de consulta de Dream y gestión de incidencias por WhatsApp con Supabase.
 
+## Continuar desde otra laptop
+Los cambios del chatbot, Supabase, panel y mascota están en la rama `codex/chatbot-incidencias-supabase`.
+
+```powershell
+git clone --branch codex/chatbot-incidencias-supabase https://github.com/willyuceda10-alt/RiegoBot.git
+cd RiegoBot
+```
+
+Sigue la [guía de instalación en otra laptop](docs/CONTINUAR_EN_OTRA_LAPTOP.md) para preparar Python, levantar el panel y abrir la mascota.
+
 ## Componentes
 - Recolector local Python + PowerShell/ACE, de solo lectura, con cola persistente.
+- Mascota de escritorio con animación, estado y controles integrados.
 - Postgres/RLS, ingesta, reglas, incidencias, fotos privadas, escalamiento y trabajos durables.
 - Webhook de WhatsApp con firma HMAC y simulación sin número real.
 - Panel React para operación, configuración, evidencias, soporte y métricas.
 
 ## Empezar en local
+Requiere Node.js 22 y Docker Desktop en ejecución. Ejecuta los comandos desde la carpeta del proyecto.
+
 ```powershell
 npm ci
 npx supabase start
@@ -26,7 +39,7 @@ Proyecto remoto previsto: `zdgfjepoptlwjaoxvuju`. Se requiere autenticar la CLI 
 ```powershell
 npm test
 npm run build
-python -m unittest discover -s tests -p 'test_*.py'
+.\.venv\Scripts\python.exe -m unittest discover -s tests -p 'test_*.py'
 npm run test:db
 node tests/api-integration.mjs
 ```

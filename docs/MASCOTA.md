@@ -1,8 +1,10 @@
 # Mascota del recolector
 
-En Windows con Python y Tkinter, ejecuta `scripts/START_MASCOT.ps1`, o `python -m dreamreader.mascot` desde la carpeta del proyecto.
+En Windows, instala las dependencias de `requirements.txt` en un Python con Tkinter. Desde la carpeta del proyecto, ejecuta `scripts/START_MASCOT.ps1 -PythonPath .\.venv\Scripts\python.exe`, o `.\.venv\Scripts\python.exe -m dreamreader.mascot`. La [guía para otra laptop](CONTINUAR_EN_OTRA_LAPTOP.md) explica cómo crear ese entorno.
 
-La mascota es un robot de riego flotante con casco, visor, brazos y boquilla, construido con una malla 3D iluminada. Usa verdes, amarillo solar y dorado inspirados en Camposol; tiene respiración, parpadeo y mirada que sigue al cursor. Arrástrala para moverla y haz clic para desplegar sus controles en la misma ventana transparente. No hay una ventana de controles separada. Inicia pausada: no transmite datos al abrirse.
+La mascota actual es un personaje de estilo anime sentado frente a una PC, con la identidad de Camposol, respiración, parpadeo y gestos suaves de lectura y escritura. Un pensamiento sobre su cabeza muestra el estado del recolector: ámbar en espera, verde con conexión confirmada recientemente y rojo ante un fallo. Consulta los [detalles del diseño y movimiento](MASCOTA_PC.md).
+
+Arrástrala para moverla y haz clic para desplegar sus controles en la misma ventana transparente. Inicia pausada: no transmite datos al abrirse.
 
 - **Iniciar:** repite la lectura con `supabase.intervalSeconds` (mínimo 30 segundos).
 - **Pausar:** termina el ciclo en curso y suspende los siguientes.
