@@ -1,5 +1,9 @@
 # Revisión visual del robot
 
+## Referencia solicitada: Astro Boy
+
+Se acerca el personaje al anime clásico solicitado: rostro cálido de proporciones humanas, ojos grandes, cabello negro de mechones puntiagudos y botas rojas. Se mantienen el logo original de Camposol, las tuberías, manómetro, acople de riego y los controles integrados. Se verificaron orientaciones laterales, parpadeo y navegación. Vista de la implementación: `runtime/astro-riego.png`.
+
 ## Refinamiento del personaje anime
 
 Se detectó un cuello excesivamente largo, ojos con esquinas duras, una cresta plana y transiciones rígidas en brazos y pies. Se compactó la silueta, se aumentó la resolución de las superficies curvas, se moderaron los reflejos y se añadieron piezas curvas en hombros y antebrazos. Los ojos usan contornos Bézier suaves. La cresta es más pequeña y tiene planos de luz y sombra.

@@ -38,17 +38,15 @@ def geometry_builder():
 
 def mesh():
     faces, tube, body = geometry_builder()
-    # Helmet and dark inset display; separate mechanical torso and limbs.
-    body((0, .46, 0), (.76, .44, .40), (232, 237, 222), .70)
-    body((0, .47, .37), (.67, .35, .085), (74, 111, 58), .43)
-    body((0, .47, .45), (.60, .28, .06), (24, 43, 38), .50)
-    body((0, .84, .04), (.39, .045, .30), (115, 164, 64), .5)
+    # Rounded retro-anime head and warm face, with sculpted black hair behind it.
+    body((0, .48, 0), (.66, .49, .40), (28, 36, 34), 1)
+    body((0, .43, .35), (.58, .42, .13), (247, 218, 180), 1)
     for side in (-1, 1):
-        body((side*.76, .44, 0), (.08, .23, .23), (86, 128, 52), .55)
-        body((side*.82, .44, .03), (.035, .12, .15), (190, 173, 108), .6)
+        body((side*.63, .42, .18), (.11, .14, .12), (238, 206, 166), 1)
+        body((side*.66, .42, .27), (.05, .075, .035), (204, 164, 127), 1)
         # Pearl ceramic shoulder shells soften the pipe joints without hiding them.
-        body((side*.60,-.20,.01),(.17,.15,.18),(225,232,211),.7)
-        body((side*.72,-.46,.015),(.13,.17,.14),(210,222,196),.6)
+        body((side*.60,-.20,.01),(.17,.15,.18),(231,209,177),.9)
+        body((side*.72,-.46,.015),(.13,.17,.14),(231,209,177),.8)
     # Filter housing as torso, with threaded pipe neck and compression rings.
     tube((0,-.10,0),(0,.05,0),.15,(112,131,116))
     tube((0,-.77,0),(0,-.12,0),.40,(221,228,213))
@@ -65,7 +63,7 @@ def mesh():
             tube((side*.73,y-.035,0),(side*.73,y+.035,0),.13,(125,156, 90))
         tube((side*.23,-.75,0),(side*.23,-1.0,0),.095,(69,85,72))
         tube((side*.23,-.89,0),(side*.23,-.84,0),.14,(175,160,109))
-        body((side*.24, -1.03, .07), (.22, .12, .27), (60, 84, 64))
+        body((side*.24, -.98, .07), (.22, .21, .28), (174,  60, 53))
     tube((-.73,-.62,0),(-.93,-.62,.04),.09,(184,158,92))
     tube((-.93,-.62,.04),(-.93,-.46,.04),.06,(184,158,92))
     body((.77, -.61, .08), (.18, .11, .15), (183, 164, 94))
@@ -112,17 +110,16 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
         polygons.append((center[2], [v for p in pts for v in project(p)], '#%02x%02x%02x'%rgb))
     for _, points, fill in sorted(polygons):
         c.create_polygon(points, fill=fill, outline=fill)
-    # Compact mecha crown, echoing Camposol's sunlight accent.
-    ax,ay=pos((0,.90,0))
-    c.create_polygon([ax-4,ay+2,ax-19,ay-9,ax-18,ay+4,ax,ay+11,ax+18,ay+4,ax+19,ay-9,ax+4,ay+2],fill="#c6b572",outline="")
-    c.create_polygon([ax,ay-4,ax+6,ay+3,ax,ay+9,ax-6,ay+3],fill="#f2ce55",outline="")
-    c.create_polygon([ax-4,ay+2,ax-19,ay-9,ax-13,ay+3,ax,ay+8],fill="#e1d5a5")
-    c.create_polygon([ax+4,ay+2,ax+19,ay-9,ax+13,ay+3,ax,ay+8],fill="#a28c4c")
+    # Two swept locks and a curved fringe define the retro-anime silhouette.
+    hair=[(-.62,.64),(-.80,1.14),(-.34,.96),(-.04,1.06),(.36,1.02),(.80,1.17),(.62,.67),(.45,.79),(.14,.86),(-.10,.73),(-.38,.65),(-.29,.83)]
+    c.create_polygon([v for x,y in hair for v in pos((x,y,.48))],fill="#172321")
+    shine=[(-.61,1.02),(-.36,.94),(-.12,.91),(-.33,.86)]
+    c.create_polygon([v for x,y in shine for v in pos((x,y,.49))],fill="#354741")
     # Anime-inspired luminous eyes: angled lids, deep irises and double catchlights.
     for side in (-1,1):
-        ex,ey=pos((side*.26,.51,.53))
+        ex,ey=pos((side*.24,.48,.49))
         if t%4.8>4.62:
-            c.create_arc(ex-10,ey-3,ex+10,ey+8,start=10,extent=160,style="arc",outline="#bde8bb",width=2.5)
+            c.create_arc(ex-10,ey-3,ex+10,ey+8,start=10,extent=160,style="arc",outline="#384c3d",width=2.5)
         else:
             # Smooth almond outline, sampled as cubic curves at display resolution.
             contour=[]
@@ -133,25 +130,25 @@ def draw_robot(c, faces, t, bounce, yaw, color, busy):
             curve((-12,-7),(-8,-15),(8,-15),(12,-9))
             curve((12,-9),(15,3),(10,14),(2,14))
             curve((2,14),(-9,15),(-14,6),(-12,-7))
-            c.create_polygon(contour,fill="#dbeee2")
-            c.create_oval(ex-7,ey-10,ex+8,ey+12,fill="#5ebea0",outline="")
-            c.create_oval(ex-4,ey-8,ex+5,ey+9,fill="#1c6050",outline="")
+            c.create_polygon(contour,fill="#fffbed")
+            c.create_oval(ex-7,ey-10,ex+8,ey+12,fill="#33483a",outline="")
+            c.create_oval(ex-4,ey-8,ex+5,ey+9,fill="#172a23",outline="")
             c.create_oval(ex-3,ey-7,ex+3,ey+7,fill="#102e29",outline="")
             c.create_oval(ex-6,ey-10,ex+1,ey-3,fill="#f6fff1",outline="")
-            c.create_oval(ex+3,ey+5,ex+6,ey+8,fill="#c7ffdf",outline="")
-            c.create_arc(ex-12,ey-15,ex+12,ey-1,start=15,extent=150,style="arc",outline="#9ecdb7",width=1.4)
+            c.create_oval(ex+3,ey+5,ex+6,ey+8,fill="#e1ead0",outline="")
+            c.create_arc(ex-12,ey-15,ex+12,ey-1,start=15,extent=150,style="arc",outline="#384c3d",width=1.4)
         cx,cy=pos((side*.48,.29,.51))
-        c.create_line(cx-4,cy,cx+3,cy-1,fill="#bdad67",width=1.5)
+        c.create_line(cx-4,cy,cx+3,cy-1,fill="#dca881",width=1.5)
     x,y=pos((0,.32,.53))
-    c.create_arc(x-10,y-5,x+10,y+7,start=190,extent=160,style="arc",outline="#caee9d",width=2)
-    # Curved glass reflection and brushed helmet trim.
-    x,y=pos((0,.69,.53))
-    c.create_line(x-28,y+2,x-8,y-2,x+20,y-1,fill="#6c9182",width=1)
+    c.create_arc(x-10,y-5,x+10,y+7,start=190,extent=160,style="arc",outline="#885e45",width=2)
+    # Small nose and confident brows keep the expression readable at desktop size.
+    x,y=pos((0,.37,.50))
+    c.create_line(x+1,y-3,x-2,y+1,x+2,y+2,fill="#be956e",width=.9)
     for side in (-1,1):
-        x,y=pos((side*.62,.24,.38))
-        c.create_oval(x-2,y-2,x+2,y+2,fill="#8d9277",outline="")
+        x,y=pos((side*.24,.68,.49))
+        c.create_arc(x-10,y-3,x+10,y+5,start=15,extent=155,style="arc",outline="#26392d",width=2)
         x,y=pos((side*.23,-1.03,.34))
-        c.create_line(x-10,y,x+10,y,fill="#93a281",width=2)
+        c.create_line(x-10,y,x+10,y,fill="#d59675",width=2)
     # Exact company artwork on the service plate, not a reconstructed symbol.
     x,y=pos((0,-.44,.43))
     c.brand(x,y,38)
