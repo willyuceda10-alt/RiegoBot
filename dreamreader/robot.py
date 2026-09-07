@@ -2,7 +2,7 @@
 import math
 
 
-def mesh():
+def geometry_builder():
     faces = []
     def tube(start, end, radius, color):
         axis = [end[k]-start[k] for k in range(3)]
@@ -15,9 +15,9 @@ def mesh():
         v = [axis[1]*u[2]-axis[2]*u[1], axis[2]*u[0]-axis[0]*u[2], axis[0]*u[1]-axis[1]*u[0]]
         center = tuple((start[k]+end[k])/2 for k in range(3))
         def ring(p, j):
-            angle = j*math.tau/32
+            angle = j*math.tau/64
             return tuple(p[k]+radius*(u[k]*math.cos(angle)+v[k]*math.sin(angle)) for k in range(3))
-        for j in range(32):
+        for j in range(64):
             a,b,c,d=ring(start,j),ring(end,j),ring(end,j+1),ring(start,j+1)
             faces.append(([a,b,c,d], center, color))
             faces.append(([start,a,d,start], center, color))
@@ -33,6 +33,11 @@ def mesh():
         for i in range(12):
             for j in range(24):
                 faces.append(([point(i,j), point(i+1,j), point(i+1,j+1), point(i,j+1)], center, color))
+    return faces, tube, body
+
+
+def mesh():
+    faces, tube, body = geometry_builder()
     # Helmet and dark inset display; separate mechanical torso and limbs.
     body((0, .56, 0), (.72, .43, .39), (235, 239, 215), .46)
     body((0, .57, .37), (.63, .34, .085), (70, 111, 45), .43)

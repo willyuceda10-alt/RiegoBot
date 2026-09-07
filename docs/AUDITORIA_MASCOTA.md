@@ -1,5 +1,11 @@
 # Revisión visual del robot
 
+## Dirección actual: estación de riego
+
+La silueta humanoide, el visor con ojos y el rebote sugerían un juguete. La nueva dirección presenta un cabezal de riego compacto: tubería continua, filtro, uniones, manómetro, electroválvula y caja electrónica. El logo original aparece en la placa del filtro. Se elimina la cara y el rebote; la actividad se muestra en el módulo de sincronización. El manómetro es decorativo y carece de una lectura numérica que pueda confundirse con una medición real.
+
+Se revisó una imagen del render y se verificó el ciclo de apertura, ajustes, actividad y cierre de controles sin crear ventanas adicionales. La implementación anterior se conserva en el historial y en el módulo de geometría del robot; la estación es la presentación predeterminada.
+
 Problemas encontrados: aristas dentadas al dibujar polígonos directamente en Tk; casco, cuerpo y accesorios con materiales demasiado parecidos; visor plano; botones principales y secundarios con el mismo peso; ausencia de respuesta al pasar el cursor y de foco visible.
 
 Cambios: renderizado a triple resolución con reducción antialias, mayor detalle de malla, carcasa marfil con remates verdes, visor oscuro con reflejo, acoples metálicos dorados, manguera de riego, detalles de servicio y ojos luminosos. Paleta inspirada en la referencia Camposol. Se conserva una única ventana con controles desplegables, foco de teclado y estados de hover.

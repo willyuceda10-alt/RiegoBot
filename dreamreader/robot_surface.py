@@ -1,7 +1,7 @@
 """Supersampled drawing surface shared by the desktop and visual previews."""
 from PIL import Image, ImageDraw, ImageFont
 from functools import lru_cache
-from .robot import mesh, draw_robot
+from .station import mesh, draw_station
 from . import PROJECT_ROOT
 
 
@@ -19,7 +19,7 @@ def geometry():
 @lru_cache(maxsize=64)
 def robot_frame(yaw, blink, phase, color, busy):
     surface = Surface()
-    draw_robot(surface, geometry(), 4.7 if blink else 1+phase/4, 0, yaw, color, busy)
+    draw_station(surface, geometry(), 1+phase/4, 0, yaw, color, busy)
     rendered = surface.finish()
     rendered.putalpha(rendered.getchannel("A").point(lambda value: 255 if value >= 128 else 0))
     return rendered

@@ -48,7 +48,7 @@ class CompanionView:
         titles = tk.Frame(header, bg=BG)
         titles.pack(side="left")
         tk.Label(titles, text="RiegoBot", bg=BG, fg="#e4eed8", font=("Segoe UI",16,"bold")).pack(anchor="w")
-        tk.Label(titles, text="Monitoreo de riego · Camposol", bg=BG, fg="#aabd9e", font=("Segoe UI",9)).pack(anchor="w")
+        tk.Label(titles, text="Estación de riego · Camposol", bg=BG, fg="#aabd9e", font=("Segoe UI",9)).pack(anchor="w")
         tk.Label(self.controls, textvariable=self.state_var, bg=BG, fg="white", wraplength=375, justify="left", font=("Segoe UI", 10)).pack(anchor="w", pady=(8, 5))
         tk.Label(self.controls, textvariable=self.info_var, bg=BG, fg="#a6bdb3", justify="left", font=("Segoe UI", 9)).pack(anchor="w")
         row = tk.Frame(self.controls, bg=BG)
@@ -116,16 +116,16 @@ class CompanionView:
         c.delete("all")
         now = time.monotonic()
         t = now - self.birth
-        bounce = math.sin(t*2.0)*3 + (math.sin((now-self.reaction)*12)*6 if now-self.reaction < 0.7 else 0)
-        yaw = math.sin(t*0.65)*0.14
+        bounce = 0
+        yaw = -0.12
         mouse_x = max(-1, min(1, (self.root.winfo_pointerx()-self.root.winfo_rootx()-210)/210))
-        yaw += mouse_x*0.10
-        frame_key = (round(yaw/0.08)*0.08, t%4.8>4.62, int(t*4)%4 if self.busy else 0, self.color, self.busy)
+        yaw += mouse_x*0.025
+        frame_key = (round(yaw/0.08)*0.08, False, int(t*4)%4 if self.busy else 0, self.color, self.busy)
         if frame_key != self.frame_key:
             self.robot_image = ImageTk.PhotoImage(robot_frame(*frame_key))
             self.frame_key = frame_key
         c.create_image(0, bounce, anchor="nw", image=self.robot_image)
-        caption = "Sincronizando…" if self.busy else ("Automático activo" if self.running else "Toca para ver controles")
+        caption = "Sincronizando…" if self.busy else ("Automático activo" if self.running else "Abrir estación de riego")
         c.create_rectangle(109, 239, 311, 267, fill=BG, outline="")
         c.create_text(210, 253, text=caption, fill="#e5f3de", font=("Segoe UI", 10))
 
