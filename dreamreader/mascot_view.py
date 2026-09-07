@@ -10,6 +10,7 @@ import tkinter as tk
 
 from . import PROJECT_ROOT
 from .config import load_config
+from .robot import mesh, draw_robot
 
 BG = "#142d29"
 KEY = "#ff00ff"
@@ -53,17 +54,7 @@ class CompanionView:
             self.button(nav, label, action, side="left")
         self.content = tk.Frame(self.controls, bg=BG)
         self.content.pack(fill="both", expand=True)
-        self.mesh = []
-        # A closed surface of revolution: round belly, tapered water-drop crown.
-        latitudes, longitudes = 28, 44
-        def point(i, j):
-            theta = math.pi * i / latitudes
-            phi = math.tau * j / longitudes
-            radius = math.sin(theta) * (0.80 - 0.24 * math.cos(theta))
-            return (radius * math.cos(phi), 1.10 * math.cos(theta), radius * math.sin(phi))
-        for i in range(latitudes):
-            for j in range(longitudes):
-                self.mesh.append([point(i, j), point(i+1, j), point(i+1, j+1), point(i, j+1)])
+        self.mesh = mesh()
         self.animate()
 
     def button(self, parent, label, action, side="top", accent=False):
@@ -117,59 +108,14 @@ class CompanionView:
         yaw = math.sin(t*0.65)*0.14
         mouse_x = max(-1, min(1, (self.root.winfo_pointerx()-self.root.winfo_rootx()-210)/210))
         yaw += mouse_x*0.10
-        scale = 76*(1+0.015*math.sin(t*2))
-        def rotate(p):
-            x, y, z = p
-            return (x*math.cos(yaw)+z*math.sin(yaw), y, -x*math.sin(yaw)+z*math.cos(yaw))
-        def project(p):
-            x, y, z = p
-            perspective = 5/(5-z)
-            return (210+x*scale*perspective, 128-y*scale*perspective+bounce)
-        c.create_oval(155, 214, 265, 228, fill="#20372e", outline="")
-        faces = []
-        for face in self.mesh:
-            points = [rotate(p) for p in face]
-            center = [sum(p[k] for p in points)/4 for k in range(3)]
-            a = [points[1][k]-points[0][k] for k in range(3)]
-            b = [points[3][k]-points[0][k] for k in range(3)]
-            normal = [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]
-            if sum(normal[k]*center[k] for k in range(3)) < 0:
-                normal = [-v for v in normal]
-            length = math.sqrt(sum(v*v for v in normal)) or 1
-            n = [v/length for v in normal]
-            if n[2] < -0.12:
-                continue
-            diffuse = max(0, -n[0]*0.45+n[1]*0.55+n[2]*0.70)
-            gloss = max(0, -n[0]*0.25+n[1]*0.32+n[2]*0.914)**40
-            rgb = [min(255, int(base*(0.36+0.62*diffuse)+gloss*150)) for base in (100, 202, 139)]
-            color = '#%02x%02x%02x' % tuple(rgb)
-            coords = [v for p in points for v in project(p)]
-            faces.append((center[2], coords, color))
-        for _, coords, color in sorted(faces):
-            c.create_polygon(coords, fill=color, outline=color)
-        # Face rides the projected front surface as the character turns.
-        blink = t % 4.8 > 4.62
-        for x in (-0.27, 0.27):
-            px, py = project(rotate((x, 0.02, 0.79)))
-            if blink:
-                c.create_line(px-7, py, px+7, py, fill="#123a2d", width=4, capstyle="round")
-            else:
-                c.create_oval(px-8, py-11, px+8, py+11, fill="#123a2d", outline="")
-                c.create_oval(px-3, py-7, px+2, py-2, fill="#f0ffed", outline="")
-        mx, my = project(rotate((0, -0.22, 0.87)))
-        c.create_arc(mx-13, my-8, mx+13, my+8, start=185, extent=170, style="arc", outline="#123a2d", width=3)
-        c.create_oval(242, 53+bounce, 277, 67+bounce, fill="#c0e693", outline="#8dbb66", width=2)
-        c.create_line(234, 66+bounce, 266, 59+bounce, fill="#5c9655", width=2)
-        c.create_oval(273, 185, 289, 201, fill=self.color, outline="#e4f6dd", width=2)
-        if self.busy:
-            c.create_arc(146, 66, 275, 208, start=(t*110)%360, extent=65, style="arc", outline="#d5ed98", width=3)
+        draw_robot(c, self.mesh, t, bounce, yaw, self.color, self.busy)
         caption = "Sincronizando…" if self.busy else ("Automático activo" if self.running else "Toca para ver controles")
         c.create_rectangle(109, 239, 311, 267, fill=BG, outline="")
         c.create_text(210, 253, text=caption, fill="#e5f3de", font=("Segoe UI", 10))
 
     def animate(self):
         self.draw()
-        self.root.after(50, self.animate)
+        self.root.after(80, self.animate)
 
     def clear_content(self, page):
         for widget in self.content.winfo_children():

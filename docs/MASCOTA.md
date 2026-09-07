@@ -2,7 +2,7 @@
 
 En Windows con Python y Tkinter, ejecuta `scripts/START_MASCOT.ps1`, o `python -m dreamreader.mascot` desde la carpeta del proyecto.
 
-La mascota es una gota verde flotante con una malla 3D iluminada, respiración, parpadeo y mirada que sigue al cursor. Arrástrala para moverla y haz clic para desplegar sus controles en la misma ventana transparente. No hay una ventana de controles separada. Inicia pausada: no transmite datos al abrirse.
+La mascota es un robot de riego flotante con casco, visor, brazos y boquilla, construido con una malla 3D iluminada. Usa verdes, amarillo solar y dorado inspirados en Camposol; tiene respiración, parpadeo y mirada que sigue al cursor. Arrástrala para moverla y haz clic para desplegar sus controles en la misma ventana transparente. No hay una ventana de controles separada. Inicia pausada: no transmite datos al abrirse.
 
 - **Iniciar:** repite la lectura con `supabase.intervalSeconds` (mínimo 30 segundos).
 - **Pausar:** termina el ciclo en curso y suspende los siguientes.
