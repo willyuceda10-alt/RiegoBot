@@ -63,7 +63,7 @@ def cycle(cfg:dict,outbox:Outbox,since:str):
     try:outbox.flush(endpoint,token)
     except Exception:logging.warning("Pending batches retained; retry after extraction")
     command=["powershell.exe","-NoProfile","-ExecutionPolicy","Bypass","-File",str(PROJECT_ROOT/"scripts/EXPORT_TELEMETRY.ps1"),"-DatabaseRoot",str(root),"-Since",since]
-    with subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8") as proc:
+    with subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8",creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0)) as proc:
         chunk=[]
         assert proc.stdout
         for line in proc.stdout:
