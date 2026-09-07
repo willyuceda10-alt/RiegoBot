@@ -42,6 +42,7 @@ function Invoke-NormalizedExtraction {
     $normalizedDirectory = Join-Path $SessionDirectory 'normalized'
     New-Item -ItemType Directory -Path $normalizedDirectory -Force | Out-Null
     $mapping = Resolve-Mapping -MappingsDirectory (Join-Path $BaseDirectory 'mappings') -Entity 'DreamStatus' -AllowCandidateMappings $AllowCandidateMappings
+    if ($null -eq $mapping) { return @() }
     $databaseRoot = Resolve-ConfiguredPath $BaseDirectory ([string]$Config.discovery.rootPath)
     $databasePath = Join-Path $databaseRoot ([string]$mapping.sourceDatabase)
     if (-not (Test-Path -LiteralPath $databasePath -PathType Leaf)) { Write-ReaderLog $LogPath 'WARN' 'Normalizer' 'UNRESOLVED' $mapping.sourceDatabase 'Mapped database does not exist.'; return @() }
@@ -50,10 +51,10 @@ function Invoke-NormalizedExtraction {
     try {
         $opened = Open-DatabaseReadOnly -DatabasePath $databasePath -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds)
         $openWatch.Stop(); Add-PerformanceRecord $Metrics $Config.collector.collectorId 'SHARED' $mapping.sourceDatabase 'DatabaseOpen' $opened.Provider $openWatch.ElapsedMilliseconds 0 $true ''
-        foreach ($dream in @($Dreams | Where-Object { $_.FileExists -and $_.Status -in @('CONFIGURED','DISCOVERED') })) {
+        foreach ($dream in @($Dreams | Where-Object { $_.FileExists -and $_.Status -in @('CONFIGURED') })) {
             if ([string]$dream.DreamId -notmatch '^[0-9]+$') { continue }
             $queryWatch = [System.Diagnostics.Stopwatch]::StartNew()
-            $sql = "SELECT TOP 1 [Dream], [RepDate], [RepTime], [RepCode], [RepCodeStr], [State] FROM [ReportsRT] WHERE [Dream] = $($dream.DreamId) ORDER BY [RepDate] DESC, [RepTime] DESC"
+            $sql = "SELECT TOP 1 [Dream], [RepDate], [RepTime], [RepCode], [RepCodeStr], [State] FROM [Reports] WHERE [Dream] = $($dream.DreamId) ORDER BY [RepDate] DESC, [RepTime] DESC"
             $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery 1)
             $queryWatch.Stop(); Add-PerformanceRecord $Metrics $Config.collector.collectorId $dream.DreamKey $mapping.sourceDatabase 'Query' $opened.Provider $queryWatch.ElapsedMilliseconds $sourceRows.Count $true ''
             foreach ($sourceRow in $sourceRows) { $rows.Add((Convert-ToNormalizedEntity -SourceRow $sourceRow -Dream $dream -Config $Config -Mapping $mapping)); Write-ReaderLog $LogPath 'INFO' 'Normalizer' $dream.DreamKey $mapping.sourceDatabase 'Candidate DreamStatus observation written.' }
@@ -79,10 +80,10 @@ function Invoke-WaterMeterExtraction {
         $sql = 'SELECT W.[Dream], W.[WM_Ind], W.[WM_GType], W.[WM_Number], W.[WM_Ratio], W.[WM_SName], L.[DateA], L.[TimeA], L.[ValueA] FROM [Water_Meters] AS W INNER JOIN [LastWM] AS L ON W.[Dream]=L.[Dream] AND W.[WM_GType]=L.[ObjSubType] AND W.[WM_Number]=L.[ObjNum]'
         $sourceRows = @(Invoke-SafeRead -Connection $opened.Connection -Sql $sql -QueryTimeoutSeconds ([int]$Config.runtime.queryTimeoutSeconds) -MaxRowsPerQuery ([int]$Config.runtime.maxRowsPerQuery))
         $rows = foreach ($source in $sourceRows) {
-            $dream = $Dreams | Where-Object { $_.DreamId -eq [string]$source.Dream } | Select-Object -First 1
+            $dream = $Dreams | Where-Object { $_.DreamId -eq [string]$source.Dream -and $_.Status -eq 'CONFIGURED' -and $_.FileExists } | Select-Object -First 1
             if ($null -eq $dream) { continue }
             $timestamp = ([datetime]$source.DateA).Date.Add(([datetime]$source.TimeA).TimeOfDay).ToString('o')
-            [pscustomobject]@{ CollectorId=$Config.collector.collectorId; SiteId=$Config.collector.siteId; DreamKey=$dream.DreamKey; DreamId=$dream.DreamId; Timestamp=$timestamp; MeterId=([string]$source.WM_GType + ':' + [string]$source.WM_Number); MeterName=(if ([string]::IsNullOrWhiteSpace([string]$source.WM_SName)) {$null} else {$source.WM_SName}); MeterIndex=$source.WM_Ind; MeterGroupRaw=$source.WM_GType; MeterNumberRaw=$source.WM_Number; MeterRatioRaw=$source.WM_Ratio; RawValue=$source.ValueA; Unit=$null; UnitStatus='UNRESOLVED'; SourceDatabase=$mapping.sourceDatabase; SourceTable='Water_Meters + LastWM'; MappingStatus=$mapping.status; Confidence=$mapping.confidence }
+            [pscustomobject]@{ CollectorId=$Config.collector.collectorId; SiteId=$Config.collector.siteId; DreamKey=$dream.DreamKey; DreamId=$dream.DreamId; Timestamp=$timestamp; MeterId=([string]$source.WM_GType + ':' + [string]$source.WM_Number); MeterName=$(if ([string]::IsNullOrWhiteSpace([string]$source.WM_SName)) {$null} else {$source.WM_SName}); MeterIndex=$source.WM_Ind; MeterGroupRaw=$source.WM_GType; MeterNumberRaw=$source.WM_Number; MeterRatioRaw=$source.WM_Ratio; RawValue=$source.ValueA; Unit=$null; UnitStatus='UNRESOLVED'; SourceDatabase=$mapping.sourceDatabase; SourceTable='Water_Meters + LastWM'; MappingStatus=$mapping.status; Confidence=$mapping.confidence }
         }
         @($rows) | Export-Csv -LiteralPath (Join-Path $normalizedDirectory 'water_meters.csv') -NoTypeInformation -Encoding utf8
         @($rows) | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $normalizedDirectory 'water_meters.json') -Encoding utf8

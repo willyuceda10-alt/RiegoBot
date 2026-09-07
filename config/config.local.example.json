@@ -1,0 +1,12 @@
+{
+  "discovery": {
+    "rootPath": "C:\\Dream"
+  },
+  "supabase": {
+    "url": "https://zdgfjepoptlwjaoxvuju.supabase.co",
+    "collectorId": "COPIAR-ID-DESDE-PANEL",
+    "timezone": "America/Bogota",
+    "lookbackDays": 2,
+    "intervalSeconds": 60
+  }
+}
