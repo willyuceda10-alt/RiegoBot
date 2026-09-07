@@ -1,11 +1,20 @@
-import { db, json, error, must, staff, sha, queue } from "../_shared/common.ts";
+import {
+  db,
+  json,
+  error,
+  must,
+  staff,
+  sha,
+  queue,
+  boundedJson,
+} from "../_shared/common.ts";
 import { validateRule } from "../../../core/domain.ts";
 import { inbound, work, saveEvidence } from "../_shared/worker.ts";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return json({});
   if (req.method !== "POST") return json({ error: "POST requerido" }, 405);
   try {
-    const b = await req.json();
+    const b = await boundedJson(req, 15 * 1024 * 1024);
     const actor = await staff(req, b.site_id);
     const admin = () => {
       if (actor.role !== "admin") throw Error("Solo administradores");
@@ -198,6 +207,8 @@ Deno.serve(async (req) => {
       return json({ collector, token });
     }
     if (b.action === "simulate") {
+      // Simulation impersonates a contact and applies real incident transitions.
+      admin();
       if (Deno.env.get("DRY_RUN") !== "true")
         throw Error("Simulación deshabilitada");
       must(
@@ -292,14 +303,12 @@ Deno.serve(async (req) => {
           .eq("id", i.id),
       );
       must(
-        await db()
-          .from("incident_events")
-          .insert({
-            incident_id: i.id,
-            actor: actor.id,
-            action: "assigned",
-            body: c.name,
-          }),
+        await db().from("incident_events").insert({
+          incident_id: i.id,
+          actor: actor.id,
+          action: "assigned",
+          body: c.name,
+        }),
       );
       await queue(
         c.phone,

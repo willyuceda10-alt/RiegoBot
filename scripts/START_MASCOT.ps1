@@ -1,4 +1,4 @@
-param([string]$PythonPath = 'python.exe')
+param([string]$PythonPath = 'python.exe', [switch]$Controls)
 $ErrorActionPreference = 'Stop'
 $base = Split-Path $PSScriptRoot -Parent
 $python = (Get-Command $PythonPath -ErrorAction Stop).Source
@@ -8,4 +8,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 $windowless = Join-Path (Split-Path $python -Parent) 'pythonw.exe'
 if (-not (Test-Path -LiteralPath $windowless)) { $windowless = $python }
-Start-Process -FilePath $windowless -ArgumentList '-m dreamreader.mascot' -WorkingDirectory $base -WindowStyle Hidden
+$arguments = '-m dreamreader.mascot'
+if ($Controls) { $arguments += ' --controls' }
+Start-Process -FilePath $windowless -ArgumentList $arguments -WorkingDirectory $base -WindowStyle Hidden

@@ -26,8 +26,47 @@ export function error(e: unknown) {
   console.error(e);
   return json(
     { error: e instanceof Error ? e.message : "Operación rechazada" },
-    400,
+    e instanceof PayloadTooLargeError ? 413 : 400,
   );
+}
+export class PayloadTooLargeError extends Error {
+  constructor() {
+    super("Carga demasiado grande");
+  }
+}
+// Check actual streamed bytes: Content-Length can be absent or untrusted.
+export async function boundedBytes(
+  source: Request | Response,
+  limit: number,
+): Promise<Uint8Array> {
+  const reader = source.body?.getReader();
+  if (!reader) return new Uint8Array();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > limit) {
+        await reader.cancel();
+        throw new PayloadTooLargeError();
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+export async function boundedJson(req: Request, limit: number) {
+  return JSON.parse(new TextDecoder().decode(await boundedBytes(req, limit)));
 }
 export async function sha(value: string) {
   return [

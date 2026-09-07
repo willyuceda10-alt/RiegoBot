@@ -1,5 +1,10 @@
-import { db, must, queue } from "./common.ts";
-import { parseMessage, help, nextRetry } from "../../../core/domain.ts";
+import { db, must, queue, boundedBytes } from "./common.ts";
+import {
+  parseMessage,
+  help,
+  nextRetry,
+  canAccessIncident,
+} from "../../../core/domain.ts";
 
 async function allowedCase(id: number, contact: any) {
   const i = must(
@@ -10,13 +15,7 @@ async function allowedCase(id: number, contact: any) {
       .eq("site_id", contact.site_id)
       .single(),
   );
-  const recipients = (i.policy.levels ?? []).flatMap((l: any) => l.contacts);
-  if (
-    !["supervisor", "jefe", "mantenimiento", "admin"].includes(contact.role) &&
-    !recipients.includes(contact.id) &&
-    i.assignee_id !== contact.id &&
-    i.source_data.requester_phone !== contact.phone
-  )
+  if (!canAccessIncident(i, contact))
     throw Error("No estás asignado a esta incidencia");
   return i;
 }
@@ -82,7 +81,10 @@ export async function inbound(message: any) {
           version +
           "/" +
           encodeURIComponent(message.image.id),
-        { headers: { Authorization: "Bearer " + token } },
+        {
+          headers: { Authorization: "Bearer " + token },
+          signal: AbortSignal.timeout(20000),
+        },
       );
       if (!metadata.ok) throw Error("No se pudo obtener la foto");
       const meta = await metadata.json();
@@ -97,9 +99,10 @@ export async function inbound(message: any) {
       const media = await fetch(url, {
         headers: { Authorization: "Bearer " + token },
         redirect: "error",
+        signal: AbortSignal.timeout(20000),
       });
       if (!media.ok) throw Error("Descarga de foto fallida");
-      const bytes = new Uint8Array(await media.arrayBuffer());
+      const bytes = await boundedBytes(media, 10 * 1024 * 1024);
       await saveEvidence(
         id,
         site,
@@ -182,16 +185,25 @@ export async function inbound(message: any) {
       if (!rules.length)
         throw Error("No hay responsables de soporte configurados");
       const id = must(
-        await db().rpc("open_incident", {
-          s: site,
-          r: rules[0].id,
-          d: intent.dream ?? null,
+        await db().rpc("open_support_incident", {
+          rule: rules[0].id,
+          message_id: message.id,
+          phone,
+          dream: intent.dream ?? null,
           title_text: intent.note ?? "Soporte solicitado",
-          asset: "manual:" + message.id,
-          policy_data: rules[0],
-          raw: { message_id: message.id, requester_phone: phone },
         }),
       );
+      const supportCase = await allowedCase(id, contact);
+      if (supportCase.status === "resolved") {
+        await queue(
+          phone,
+          site,
+          "El caso #" + id + " ya fue resuelto.",
+          key,
+          id,
+        );
+        return;
+      }
       must(
         await db()
           .from("conversations")
@@ -227,30 +239,17 @@ export async function inbound(message: any) {
       return;
     }
     if (intent.kind === "incidents") {
-      const cases = must(
-        await db()
-          .from("incidents")
-          .select("*")
-          .eq("site_id", site)
-          .neq("status", "resolved")
-          .order("created_at", { ascending: false })
-          .limit(50),
-      );
-      const visible = cases.filter(
-        (i: any) =>
-          ["supervisor", "jefe", "admin", "mantenimiento"].includes(
-            contact.role,
-          ) ||
-          (i.policy.levels ?? []).some((l: any) =>
-            l.contacts.includes(contact.id),
-          ),
+      const visible = must(
+        await db().rpc("contact_incidents", {
+          contact: contact.id,
+          max_rows: 15,
+        }),
       );
       await queue(
         phone,
         site,
         visible.length
           ? visible
-              .slice(0, 15)
               .map((i: any) => "#" + i.id + " · " + i.title + " · " + i.status)
               .join("\n")
           : "No tienes incidencias pendientes asignadas.",
@@ -485,7 +484,15 @@ async function outbound(p: any) {
       "UNCERTAIN: Resultado de envío desconocido; reconciliar antes de reenviar",
     );
   }
-  const result = await response.json();
+  let result: any;
+  try {
+    result = await response.json();
+  } catch {
+    // Meta may already have accepted the send before its response was truncated.
+    throw Error(
+      "UNCERTAIN: Respuesta de Meta incompleta; reconciliar antes de reenviar",
+    );
+  }
   if (!response.ok)
     throw Error(
       "Meta rechazó envío: " +

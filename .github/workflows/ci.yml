@@ -10,17 +10,18 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm audit --audit-level=high
       - run: npm test
       - run: npm run build
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
-      - run: python -m unittest discover -s tests -p 'test_*.py'
+      - run: xvfb-run -a python -m unittest discover -s tests -p 'test_*.py'
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - run: deno test --allow-env --config supabase/functions/deno.json tests/signature.test.ts
+      - run: deno test --allow-env --config supabase/functions/deno.json tests/signature.test.ts tests/backend-security.test.ts
       - run: deno check --config supabase/functions/deno.json supabase/functions/*/index.ts
   database:
     runs-on: ubuntu-latest

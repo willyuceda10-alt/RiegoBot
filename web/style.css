@@ -83,7 +83,7 @@ p {
 }
 small {
   display: block;
-  color: #728176;
+  color: #53654d;
   font-size: 12px;
 }
 .eyebrow {
@@ -92,7 +92,7 @@ small {
   font-weight: 700;
   letter-spacing: 1.7px;
   margin-bottom: 13px;
-  color: #75887a;
+  color: #53654d;
 }
 .brand {
   display: flex;
@@ -232,7 +232,7 @@ header {
   padding: 20px 24px;
 }
 .stat > span {
-  color: #77877a;
+  color: #53654d;
   font-size: 12px;
   display: block;
 }
@@ -256,7 +256,7 @@ section {
   gap: 20px;
 }
 .section-head > span {
-  color: #7d8a7f;
+  color: #53654d;
   font-size: 12px;
 }
 .filters {
@@ -282,7 +282,7 @@ th {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #8b978d;
+  color: #53654d;
   font-weight: 600;
   padding: 12px 10px;
   border-bottom: 1px solid #e4e9e3;
@@ -298,7 +298,7 @@ tr:hover td {
 .case-link {
   display: block;
   background: none;
-  color: #8b968a;
+  color: #53654d;
   padding: 0;
   text-align: left;
   font-weight: 400;
@@ -539,7 +539,7 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid #8cbb62;
+  outline: 3px solid #31563a;
   outline-offset: 3px;
 }
 @media (max-width: 1000px) {
@@ -574,8 +574,7 @@ textarea:focus-visible {
   aside .brand {
     margin-bottom: 18px;
   }
-  aside .eyebrow,
-  .sidebar-foot {
+  aside .eyebrow {
     display: none;
   }
   nav {
@@ -623,4 +622,18 @@ textarea:focus-visible {
   header h1 {
     font-size: 27px;
   }
+}
+
+/* Audit: readable metadata, visible focus and reachable actions at high zoom. */
+aside { overflow-y: auto; }
+aside .brand small { color: #b6cebd; font-size: 10px; }
+aside :focus-visible { outline-color: #d7f0aa; }
+th { font-size: 12px; }
+.actions { flex-wrap: wrap; }
+@media (max-width: 700px) {
+  .filters { flex-wrap: wrap; }
+  .filters input, .filters select { width: 100%; max-width: none; min-width: 0; }
+  .sidebar-foot { padding-top: 12px; }
+  .sidebar-foot p { display: none; }
+  .drawer { padding: 20px; }
 }

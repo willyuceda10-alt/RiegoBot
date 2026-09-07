@@ -94,6 +94,25 @@ export type Intent = {
   entity?: string;
   today?: boolean;
 };
+export function canAccessIncident(
+  incident: {
+    site_id: string;
+    assignee_id?: string;
+    policy: { levels?: Level[] };
+    source_data?: { requester_phone?: string };
+  },
+  contact: { site_id: string; id: string; phone: string; role: string },
+) {
+  return (
+    incident.site_id === contact.site_id &&
+    (["supervisor", "jefe", "mantenimiento", "admin"].includes(contact.role) ||
+      incident.assignee_id === contact.id ||
+      incident.source_data?.requester_phone === contact.phone ||
+      (incident.policy.levels ?? []).some((level) =>
+        level.contacts.includes(contact.id),
+      ))
+  );
+}
 export function parseMessage(text: string): Intent {
   const t = text
     .normalize("NFD")

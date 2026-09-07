@@ -11,6 +11,8 @@ foreach($dreamFile in Get-ChildItem -LiteralPath $DatabaseRoot -Filter 'Dream*_1
 foreach($file in $plans.Keys){
  $path=Join-Path $DatabaseRoot $file
  if(-not(Test-Path -LiteralPath $path)){throw "Falta base requerida: $file"}
+ # Catalog tables share one file timestamp; avoid a filesystem lookup per row.
+ $fileTimestamp=(Get-Item -LiteralPath $path).LastWriteTime
  $opened=Open-DatabaseReadOnly $path 30
  try{
  foreach($plan in $plans[$file]){
@@ -30,7 +32,7 @@ foreach($file in $plans.Keys){
  $row[$reader.GetName($n)]=$value
  }
  $dream=if($file -match '^Dream([0-9]+)_1.mdb$'){$Matches[1]}elseif($row.Contains('Dream')){[string]$row['Dream']}else{[string]$row['Unit']}
- $timestamp=if($dateCol -and $row[$dateCol]){[datetime]$row[$dateCol]}else{(Get-Item -LiteralPath $path).LastWriteTime}
+ $timestamp=if($dateCol -and $row[$dateCol]){[datetime]$row[$dateCol]}else{$fileTimestamp}
  if($timeCol -and $row[$timeCol]){$timestamp=$timestamp.Date.Add(([datetime]$row[$timeCol]).TimeOfDay)}
  [pscustomobject]@{dream_id=$dream;entity=$table;source_at=$timestamp.ToString('yyyy-MM-ddTHH:mm:ss');data=$row}|ConvertTo-Json -Depth 5 -Compress
  }

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createClient, Session } from "@supabase/supabase-js";
+import { RequestScope, StaleScopeError } from "../core/request-scope";
 import "./style.css";
 const url = import.meta.env.VITE_SUPABASE_URL,
   key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -49,56 +50,140 @@ function App() {
     [rule, setRule] = useState<any>(null),
     [token, setToken] = useState<any>(null),
     [deliveries, setDeliveries] = useState<any[]>([]);
+  const [dashboardLoaded, setDashboardLoaded] = useState(false),
+    [dashboardError, setDashboardError] = useState("");
+  const requests = useRef(new RequestScope());
+  const activeUser = useRef<string | undefined>(undefined);
+  const scope = requests.current.enter(`${session?.user.id ?? ""}:${site}`);
+  function clearPrivateState() {
+    setData(empty);
+    setDetail(null);
+    setRule(null);
+    setToken(null);
+    setDeliveries([]);
+    setError("");
+    setBusy(false);
+    setDashboardLoaded(false);
+    setDashboardError("");
+  }
   async function api(action: string, body: any = {}) {
+    requests.current.assertCurrent(scope);
     if (!client) throw Error("Configura Supabase");
     const { data, error } = await client.functions.invoke("api", {
       body: { action, site_id: site, ...body },
     });
+    requests.current.assertCurrent(scope);
     if (error) {
       const response = (error as any).context;
-      let msg = error.message;
+      let msg =
+        "No se pudo conectar con RiegoBot. Comprueba la conexión y vuelve a intentarlo.";
       try {
         msg = (await response.json()).error ?? msg;
       } catch {}
+      if (
+        response?.status >= 500 ||
+        /Edge Function|Failed to fetch|NetworkError|fetch failed/i.test(msg)
+      )
+        msg =
+          "El servicio de RiegoBot no está disponible. Comprueba la conexión y vuelve a intentarlo.";
+      requests.current.assertCurrent(scope);
       throw Error(msg);
     }
     if (data?.error) throw Error(data.error);
     return data;
   }
   async function run(fn: () => Promise<void>) {
+    if (!requests.current.isCurrent(scope)) return;
     setBusy(true);
     setError("");
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (requests.current.isCurrent(scope) && !(e instanceof StaleScopeError))
+        setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setBusy(false);
+      if (requests.current.isCurrent(scope)) setBusy(false);
     }
   }
   const refresh = async () => {
-    if (site) setData(await api("dashboard"));
+    if (site) {
+      try {
+        const result = await api("dashboard");
+        if (requests.current.isCurrent(scope)) {
+          setData(result);
+          setDashboardLoaded(true);
+          setDashboardError("");
+        }
+      } catch (e) {
+        if (
+          requests.current.isCurrent(scope) &&
+          !(e instanceof StaleScopeError)
+        ) {
+          setDashboardError(
+            "No se pudieron cargar los datos. Pulsa Actualizar para reintentar.",
+          );
+        }
+        throw e;
+      }
+    }
   };
   useEffect(() => {
     if (!client) return;
-    client.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data } = client.auth.onAuthStateChange((_, s) => setSession(s));
+    let authEvents = 0;
+    const applySession = (next: Session | null) => {
+      if (activeUser.current !== next?.user.id) {
+        requests.current.invalidate();
+        activeUser.current = next?.user.id;
+        clearPrivateState();
+        setSites([]);
+        setSite("");
+      }
+      setSession(next);
+    };
+    client.auth.getSession().then(({ data }) => {
+      if (authEvents === 0) applySession(data.session);
+    });
+    const { data } = client.auth.onAuthStateChange((_, s) => {
+      authEvents++;
+      applySession(s);
+    });
     return () => data.subscription.unsubscribe();
   }, []);
   useEffect(() => {
+    let cancelled = false;
+    setSites([]);
+    setSite("");
+    setData(empty);
+    setDetail(null);
+    setRule(null);
+    setToken(null);
+    setDeliveries([]);
+    setDashboardLoaded(false);
+    setDashboardError("");
     if (session && client)
       client
         .from("sites")
         .select("*")
         .then(({ data, error }) => {
+          if (cancelled || !requests.current.isCurrent(scope)) return;
           if (error) setError(error.message);
           else {
             setSites(data ?? []);
             setSite(data?.[0]?.id ?? "");
           }
         });
-  }, [session]);
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user.id]);
   useEffect(() => {
+    setData(empty);
+    setDetail(null);
+    setRule(null);
+    setToken(null);
+    setDeliveries([]);
+    setDashboardLoaded(false);
+    setDashboardError("");
     if (site) {
       run(refresh);
       const t = setInterval(() => refresh().catch(() => {}), 20000);
@@ -147,8 +232,16 @@ function App() {
     };
   }, [!!detail, !!rule]);
   const pending = data.incidents.filter((i) => i.status !== "resolved");
-  const openDetail = async (id: number) =>
-    setDetail(await api("detail", { incident_id: id }));
+  const statValue = (value: number | string) =>
+    dashboardLoaded && !dashboardError ? value : "—";
+  const openDetail = async (id: number) => {
+    const result = await api("detail", { incident_id: id });
+    if (requests.current.isCurrent(scope)) setDetail(result);
+  };
+  const refreshDeliveries = async () => {
+    const result = await api("deliveries");
+    if (requests.current.isCurrent(scope)) setDeliveries(result);
+  };
   const transition = (act: string, note = "") =>
     run(async () => {
       await api("transition", { incident_id: detail.incident.id, act, note });
@@ -231,7 +324,11 @@ function App() {
         <select
           aria-label="Sitio"
           value={site}
-          onChange={(e) => setSite(e.target.value)}
+          onChange={(e) => {
+            requests.current.invalidate();
+            clearPrivateState();
+            setSite(e.target.value);
+          }}
         >
           {sites.map((s) => (
             <option key={s.id} value={s.id}>
@@ -254,20 +351,29 @@ function App() {
               className={tab === t ? "active" : ""}
               onClick={() => {
                 setTab(t);
-                if (t === "Entregas")
-                  run(async () => setDeliveries(await api("deliveries")));
+                if (t === "Entregas") run(refreshDeliveries);
               }}
             >
               <span>0{n + 1}</span>
               {t}
-              {t === "Incidencias" && <b>{pending.length}</b>}
+              {t === "Incidencias" && <b>{statValue(pending.length)}</b>}
             </button>
           ))}
         </nav>
         <div className="sidebar-foot">
           <span className="dot" /> Operación de solo lectura
           <p>{session.user.email}</p>
-          <button className="link" onClick={() => client.auth.signOut()}>
+          <button
+            className="link"
+            onClick={() => {
+              requests.current.invalidate();
+              clearPrivateState();
+              setSession(null);
+              void client.auth.signOut().then(({ error }) => {
+                if (error) setError(error.message);
+              });
+            }}
+          >
             Cerrar sesión
           </button>
         </div>
@@ -303,25 +409,32 @@ function App() {
             </button>
           </div>
         )}
+        {dashboardError && (
+          <p className="notice" role="status">
+            {dashboardError}{" "}
+            {dashboardLoaded &&
+              "La tabla conserva la última información recibida; no se ha confirmado su actualización."}
+          </p>
+        )}
         {tab === "Incidencias" && (
           <>
             <div className="stats">
-              <Stat label="Pendientes" value={pending.length} />
+              <Stat label="Pendientes" value={statValue(pending.length)} />
               <Stat
                 label="Por validar"
-                value={
-                  pending.filter((i) => i.status === "pending_review").length
-                }
+                value={statValue(
+                  pending.filter((i) => i.status === "pending_review").length,
+                )}
               />
               <Stat
                 label="Escaladas"
-                value={pending.filter((i) => i.level > 0).length}
+                value={statValue(pending.filter((i) => i.level > 0).length)}
               />
               <Stat
                 label="Resueltas"
-                value={
-                  data.incidents.filter((i) => i.status === "resolved").length
-                }
+                value={statValue(
+                  data.incidents.filter((i) => i.status === "resolved").length,
+                )}
               />
             </div>
             <section>
@@ -406,7 +519,17 @@ function App() {
                 </table>
               </div>
               {!data.incidents.length && (
-                <Empty text="Todavía no hay incidencias. Configura responsables y reglas para iniciar el seguimiento." />
+                <Empty
+                  text={
+                    dashboardError
+                      ? "No se pudieron cargar las incidencias. Pulsa Actualizar para reintentar."
+                      : !dashboardLoaded
+                        ? site
+                          ? "Cargando incidencias…"
+                          : "Selecciona un sitio para consultar sus incidencias."
+                        : "Todavía no hay incidencias. Configura responsables y reglas para iniciar el seguimiento."
+                  }
+                />
               )}
             </section>
           </>
@@ -663,7 +786,8 @@ function App() {
                 onSubmit={(e) => {
                   const f = form(e);
                   run(async () => {
-                    setToken(await api("collector", f));
+                    const credential = await api("collector", f);
+                    if (requests.current.isCurrent(scope)) setToken(credential);
                     await refresh();
                   });
                 }}
@@ -703,9 +827,7 @@ function App() {
             </p>
             <button
               className="secondary"
-              onClick={() =>
-                run(async () => setDeliveries(await api("deliveries")))
-              }
+              onClick={() => run(refreshDeliveries)}
             >
               Actualizar entregas
             </button>
@@ -738,7 +860,7 @@ function App() {
                                 job_id: j.id,
                                 confirmed_not_sent: f.confirmed === "on",
                               });
-                              setDeliveries(await api("deliveries"));
+                              await refreshDeliveries();
                             });
                           }}
                         >
@@ -817,18 +939,26 @@ function App() {
         {tab === "Indicadores" && (
           <>
             <div className="stats">
-              <Stat label="Casos registrados" value={data.incidents.length} />
+              <Stat
+                label="Casos registrados"
+                value={statValue(data.incidents.length)}
+              />
               <Stat
                 label="Casos cerrados"
-                value={data.incidents.filter((i) => i.resolved_at).length}
+                value={statValue(
+                  data.incidents.filter((i) => i.resolved_at).length,
+                )}
               />
               <Stat
                 label="Con evidencia por validar"
-                value={
-                  pending.filter((i) => i.status === "pending_review").length
-                }
+                value={statValue(
+                  pending.filter((i) => i.status === "pending_review").length,
+                )}
               />
-              <Stat label="Mensajes recientes" value={data.messages.length} />
+              <Stat
+                label="Mensajes recientes"
+                value={statValue(data.messages.length)}
+              />
             </div>
             <section>
               <h2>Tiempos de atención</h2>
@@ -839,11 +969,11 @@ function App() {
               <div className="stats">
                 <Stat
                   label="Recepción promedio (min)"
-                  value={average(data.incidents, "ack_at")}
+                  value={statValue(average(data.incidents, "ack_at"))}
                 />
                 <Stat
                   label="Resolución promedio (min)"
-                  value={average(data.incidents, "resolved_at")}
+                  value={statValue(average(data.incidents, "resolved_at"))}
                 />
               </div>
               <button
@@ -1036,7 +1166,7 @@ function App() {
                 e.preventDefault();
                 run(async () => {
                   await api("rule", { rule });
-                  setRule(null);
+                  if (requests.current.isCurrent(scope)) setRule(null);
                   await refresh();
                 });
               }}

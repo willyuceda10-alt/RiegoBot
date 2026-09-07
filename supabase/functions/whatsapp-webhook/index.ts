@@ -1,4 +1,12 @@
-import { db, json, error, must, signature } from "../_shared/common.ts";
+import {
+  db,
+  json,
+  error,
+  must,
+  signature,
+  boundedBytes,
+  PayloadTooLargeError,
+} from "../_shared/common.ts";
 Deno.serve(async (req) => {
   if (req.method === "GET") {
     const u = new URL(req.url);
@@ -12,8 +20,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST")
     return new Response("Method not allowed", { status: 405 });
   try {
-    const raw = await req.text();
-    if (raw.length > 1_000_000) return json({ error: "Payload grande" }, 413);
+    const raw = new TextDecoder().decode(await boundedBytes(req, 1_000_000));
     if (!(await signature(raw, req.headers.get("x-hub-signature-256"))))
       return json({ error: "Firma inválida" }, 401);
     const body = JSON.parse(raw);
@@ -44,6 +51,7 @@ Deno.serve(async (req) => {
       }
     return json({ received: true });
   } catch (e) {
+    if (e instanceof PayloadTooLargeError) return error(e);
     console.error(e);
     return json({ error: "Persistencia fallida, reintentar" }, 503);
   }

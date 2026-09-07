@@ -11,3 +11,9 @@ El logotipo del escritorio se compone con el archivo original de Camposol, sin r
 ## Prompt del arte
 
 Se solicitó a la herramienta integrada mantener exactamente el técnico anime existente (cabello negro, ojos verdes, uniforme verde, protecciones marfil y botas burdeos), sentado a una mesa con computadora y teclado. Cuatro celdas iguales en una cuadrícula 2×2, con cámara, luz, escala y mobiliario idénticos: manos en teclado leyendo; dedos derechos ligeramente elevados; dedos izquierdos elevados; pose inicial con ojos cerrados. Se pidió retirar la herramienta de campo, dejar la pantalla sin datos ni palabras, conservar una insignia circular vacía para colocar el logo original, fondo blanco liso para la presentación en escritorio y márgenes iguales. No se utilizó CLI de imágenes ni se activaron conexiones de Dream durante las pruebas.
+
+## Auditoría de rendimiento y accesibilidad
+
+La revisión del 6/09/2026 conserva la escena pequeña y añade controles nativos con teclado, estado de error visible al minimizar, panel desplazable completo y preferencias de movimiento reducido, texto grande, barra de título y siempre visible. Enter abre controles; Escape minimiza; Tab recorre acciones. Ejecutar otra vez el lanzador recupera la ventana existente; `-Controls` la abre directamente con controles.
+
+El atlas `assets/mascot/desk-sprites.png` ya contiene el recorte y el logo proporcional. Se regenera con `python scripts/prepare_companion.py`. La carga no ejecuta floodfill: primera carga medida12,1ms frente1.725ms de preparación anterior. El informe completo, regresiones y límites de producción están en [Auditoría integral](AUDITORIA_INTEGRAL_2026-09-06.md).

@@ -1,9 +1,9 @@
-import { db, json, error, must, sha } from "../_shared/common.ts";
+import { db, json, error, must, sha, boundedJson } from "../_shared/common.ts";
 import { matches, type Rule } from "../../../core/domain.ts";
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "POST requerido" }, 405);
   try {
-    const body = await req.json();
+    const body = await boundedJson(req, 4 * 1024 * 1024);
     if (
       !body.collector_id ||
       !body.batch_id ||

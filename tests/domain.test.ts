@@ -1,10 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { RequestScope, StaleScopeError } from "../core/request-scope.ts";
 import {
   matches,
   parseMessage,
   validateRule,
   nextRetry,
+  canAccessIncident,
   type Rule,
 } from "../core/domain.ts";
 const rule: Rule = {
@@ -76,4 +78,61 @@ test("Consultas seleccionan tabla por ámbito", () => {
 test("Backoff acotado", () => {
   assert.equal(nextRetry(1), 60);
   assert.equal(nextRetry(20), 3600);
+});
+test("Una respuesta pendiente no sobrevive logout y reingreso al mismo sitio", async () => {
+  const requests = new RequestScope();
+  const pendingScope = requests.enter("user-a:site-a");
+  let complete!: (value: string) => void;
+  const response = new Promise<string>((resolve) => {
+    complete = resolve;
+  });
+  const pendingCredential = (async () => {
+    requests.assertCurrent(pendingScope);
+    const credential = await response;
+    requests.assertCurrent(pendingScope);
+    return credential;
+  })();
+  requests.invalidate(); // Immediate logout invalidation, before React renders.
+  requests.enter(":");
+  const newSessionScope = requests.enter("user-a:site-a");
+  complete("secret-from-old-session");
+  await assert.rejects(pendingCredential, StaleScopeError);
+  requests.assertCurrent(newSessionScope);
+  requests.enter("user-a:site-b");
+  assert.throws(() => requests.assertCurrent(newSessionScope), StaleScopeError);
+});
+test("Asignados y solicitantes ven sus casos sin permitir acceso entre sitios", () => {
+  const contact = {
+    id: "regador",
+    phone: "51900000001",
+    site_id: "site-a",
+    role: "regador",
+  };
+  const incident = { site_id: "site-a", policy: { levels: [] } };
+  assert.equal(canAccessIncident(incident, contact), false);
+  assert.equal(
+    canAccessIncident({ ...incident, assignee_id: contact.id }, contact),
+    true,
+  );
+  assert.equal(
+    canAccessIncident(
+      { ...incident, source_data: { requester_phone: contact.phone } },
+      contact,
+    ),
+    true,
+  );
+  assert.equal(
+    canAccessIncident(
+      { ...incident, site_id: "site-b", assignee_id: contact.id },
+      contact,
+    ),
+    false,
+  );
+  assert.equal(
+    canAccessIncident(
+      { ...incident, site_id: "site-b" },
+      { ...contact, role: "admin" },
+    ),
+    false,
+  );
 });
