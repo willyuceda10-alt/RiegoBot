@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import time
@@ -12,7 +13,7 @@ from PIL import ImageTk, Image
 from . import PROJECT_ROOT
 from .config import load_config
 from .robot_surface import company_logo
-from .companion_art import companion_frame
+from .companion_art import companion_frame, motion_pose, thought_frame, PALETTES
 
 BG, INK, MUTED, KEY = "#f2f4ed", "#243e2d", "#53654d", "#ff00ff"
 COMPACT_W, COMPACT_H, PANEL_W = 230, 210, 420
@@ -23,6 +24,8 @@ class CompanionView:
         self.expanded = False
         self.page = None
         self.birth = time.monotonic()
+        self.last_motion_at = self.birth
+        self.motion_activity = 0.0
         self.drag = None
         self.state_var = tk.StringVar(value=self.status)
         self.info_var = tk.StringVar()
@@ -63,13 +66,15 @@ class CompanionView:
         root.bind("<Next>", lambda e: self.scroll(e, 1))
         root.bind("<FocusIn>", self.reveal_focus, add="+")
         self.image_item = self.canvas.create_image(0, 0, anchor="nw")
+        self.thought_item = self.canvas.create_image(0, 0, anchor="nw")
         # Native action/state, independent of decorative Canvas artwork.
-        self.caption_button = tk.Button(self.canvas, text="Abrir controles", command=self.show_panel,
-            bg="#2c4733", fg="#e5f3de", activebackground="#e5eade", activeforeground=INK,
-            font=self.caption_font, relief="flat", bd=0, highlightthickness=2, padx=0, pady=0,
-            highlightbackground="#2c4733", highlightcolor="white", takefocus=True, cursor="hand2")
+        self.caption_button = tk.Button(self.canvas, text="En espera", command=self.show_panel,
+            bg=PALETTES["waiting"]["fill"], fg=PALETTES["waiting"]["ink"],
+            activebackground=PALETTES["waiting"]["fill"], activeforeground=INK,
+            font=self.caption_font, relief="flat", bd=0, highlightthickness=1, padx=0, pady=0,
+            highlightbackground=PALETTES["waiting"]["fill"], highlightcolor=INK, takefocus=True, cursor="hand2")
         self.caption_button.bind("<Return>", lambda e: self.show_panel())
-        self.canvas.create_window(115, 195, window=self.caption_button, width=214, height=30)
+        self.canvas.create_window(121, 19, window=self.caption_button, width=104, height=28)
         # Scroll all controls so high DPI never leaves an action below an inaccessible edge.
         self.controls = tk.Frame(root, bg=BG)
         self.panel_canvas = tk.Canvas(self.controls, bg=BG, highlightthickness=0, width=PANEL_W-24)
@@ -107,7 +112,8 @@ class CompanionView:
         self.content.pack(fill="both", expand=True)
         self.frame_key = None
         self.draw_state = None
-        self.tk_frames = {}
+        self.robot_image = None
+        self.thought_image = None
         self.animate()
 
     def label(self, parent, text="", variable=None, color=MUTED):
@@ -220,29 +226,43 @@ class CompanionView:
         self.drag = None
 
     def draw(self):
-        t = time.monotonic()-self.birth
-        blink = not self.reduced_motion.get() and t % 4.7 > 4.48
-        phase = 0 if self.reduced_motion.get() else ((0, 1, 2, 1)[int(t*5)%4] if self.busy else (0, 0, 1, 0, 2, 0)[int(t*.8)%6])
-        key = (phase, blink, self.busy)
+        now = time.monotonic()
+        elapsed = max(0, min(.1, now-self.last_motion_at))
+        self.last_motion_at = now
+        target = 1.0 if self.busy and not self.closing else 0.0
+        self.motion_activity += (target-self.motion_activity)*(1-math.exp(-elapsed/0.55))
+        key = motion_pose(now-self.birth, self.motion_activity, self.reduced_motion.get())
         if key != self.frame_key:
-            if key not in self.tk_frames:
-                self.tk_frames[key] = ImageTk.PhotoImage(companion_frame(*key))
-            self.canvas.itemconfigure(self.image_item, image=self.tk_frames[key])
+            frame = companion_frame(key)
+            if self.robot_image is None:
+                self.robot_image = ImageTk.PhotoImage(frame)
+                self.canvas.itemconfigure(self.image_item, image=self.robot_image)
+            else:
+                self.robot_image.paste(frame)
             self.frame_key = key
-        state = (self.busy, self.running, self.closing, self.status_kind)
+        indicator = self.visual_status(now)
+        state = (self.busy, self.running, self.closing, self.status_kind, indicator)
         if state != self.draw_state:
             self.run_button.configure(text="Pausar automático" if self.running else "Iniciar automático", state="disabled" if self.closing else "normal")
             self.sync_button.configure(state="disabled" if self.busy or self.closing else "normal")
-            caption = ("Cerrando…" if self.closing else "Sincronizando…" if self.busy else
-                       "Revisar error · abrir" if self.status_kind == "error" else
-                       "Configurar · abrir" if self.status_kind == "config" else
-                       "Esperando · abrir" if self.running else "En pausa · abrir")
-            self.caption_button.configure(text=caption)
+            caption = {"waiting": "Leyendo…" if self.busy else "En espera",
+                       "online": "En línea", "error": "Revisar fallo"}[indicator]
+            palette = PALETTES[indicator]
+            self.caption_button.configure(text=caption, bg=palette["fill"], fg=palette["ink"],
+                activebackground=palette["fill"], activeforeground=palette["ink"],
+                highlightbackground=palette["fill"], highlightcolor=palette["ink"])
+            if self.thought_image is None:
+                self.thought_image = ImageTk.PhotoImage(thought_frame(indicator))
+                self.canvas.itemconfigure(self.thought_item, image=self.thought_image)
+            else:
+                self.thought_image.paste(thought_frame(indicator))
             self.draw_state = state
 
     def animate(self):
+        started = time.monotonic()
         self.draw()
-        self.animation_timer = self.root.after(500 if self.reduced_motion.get() else 100, self.animate)
+        interval = 500 if self.reduced_motion.get() else max(8, 33-round((time.monotonic()-started)*1000))
+        self.animation_timer = self.root.after(interval, self.animate)
 
     def clear_content(self, page):
         for widget in self.content.winfo_children():
@@ -285,7 +305,7 @@ class CompanionView:
                 highlightbackground=BG, highlightcolor=INK, wraplength=310)
             check.pack(fill="x", pady=2)
             checks.append(check)
-        self.label(self.content, "Enter abre los controles. Escape los minimiza. Tab recorre las acciones.").pack(fill="x", pady=8)
+        self.label(self.content, "Pulsa el pensamiento o Enter para abrir controles. Escape minimiza; Tab recorre acciones.").pack(fill="x", pady=8)
         try:
             cfg = load_config(PROJECT_ROOT)
         except (OSError, ValueError):
@@ -337,6 +357,7 @@ class CompanionView:
             temporary.write_text(json.dumps(local, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
             temporary.replace(path)
             os.environ["RIEGOBOT_COLLECTOR_TOKEN"] = self.entries["Token (sesión)"].get().strip()
+            self.invalidate_connection()
             self.config_error.set("Guardado. El token permanece solo en esta sesión.")
             self.set_status("Ajustes guardados. Puedes iniciar la lectura.", "#63ab65", "ready")
         except (ValueError, OSError, AttributeError, TypeError):

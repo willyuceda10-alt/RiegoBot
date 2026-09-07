@@ -29,6 +29,10 @@ class Mascot(CompanionView):
         self.closing = False
         self.next_run = 0.0
         self.last_success = "Todavía no se ha sincronizado"
+        self.last_confirmed_at = None
+        self.connection_failed = False
+        self.paused_by_user = True
+        self.connection_interval = 60
         self.status = "Listo para configurar"
         self.status_kind = "config"
         self.color = "#82978e"
@@ -41,12 +45,32 @@ class Mascot(CompanionView):
     def start(self):
         if not self.closing:
             self.running = True
+            self.paused_by_user = False
             self.next_run = 0
             self.set_status("Automático iniciado. Preparando lectura…", "#63ab65")
 
     def pause(self):
         self.running = False
+        self.paused_by_user = True
         self.set_status("Pausando al terminar el ciclo…" if self.busy else "En pausa", "#d49a38")
+
+    def visual_status(self, now=None):
+        """Show recent acknowledged contact, never infer connectivity from work."""
+        if self.closing:
+            return "waiting"
+        if self.connection_failed or self.status_kind == "error":
+            return "error"
+        if self.paused_by_user or self.status_kind == "config" or self.last_confirmed_at is None:
+            return "waiting"
+        now = time.monotonic() if now is None else now
+        age = now-self.last_confirmed_at
+        lifetime = min(300, max(90, self.connection_interval*2))
+        return "online" if 0 <= age < lifetime else "waiting"
+
+    def invalidate_connection(self):
+        """A saved connection must earn its own successful acknowledgement."""
+        self.last_confirmed_at = None
+        self.connection_failed = False
 
     def once(self):
         if self.busy or self.closing:
@@ -59,10 +83,14 @@ class Mascot(CompanionView):
                 raise ValueError("Falta el token del recolector. Agrégalo en Ajustes.")
             from .collector import ingest_endpoint
             ingest_endpoint(cfg.get("supabase", {}).get("url", ""))
+            self.connection_interval = min(86400, max(30, int(cfg.get("supabase", {}).get("intervalSeconds", 60))))
         except (ValueError, OSError, TypeError, AttributeError):
             self.running = False
+            self.invalidate_connection()
+            self.connection_failed = True
             self.set_status("Revisa URL, token y modo de solo lectura en Ajustes.", "#c36a47", "config")
             return
+        self.paused_by_user = False
         self.busy = True
         self.set_status("Leyendo Dream y enviando datos…", "#e7b64e")
         threading.Thread(target=self.collect, daemon=True).start()
@@ -129,14 +157,17 @@ class Mascot(CompanionView):
         try:
             success = self.events.get_nowait()
             self.busy = False
+            self.connection_failed = not success
             if success:
                 self.last_success = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            self.set_status("Sincronización completada" if success else "No se completó el ciclo. Revisa el registro.", "#63ab65" if success else "#c36a47", "ready" if success else "error")
+                self.last_confirmed_at = time.monotonic()
             try:
-                interval = max(30, int(load_config(PROJECT_ROOT).get("supabase", {}).get("intervalSeconds", 60)))
+                interval = min(86400, max(30, int(load_config(PROJECT_ROOT).get("supabase", {}).get("intervalSeconds", 60))))
             except Exception:
                 interval = 60
+            self.connection_interval = interval
             self.next_run = time.monotonic() + interval
+            self.set_status("Sincronización completada" if success else "No se completó el ciclo. Revisa el registro.", "#63ab65" if success else "#c36a47", "ready" if success else "error")
         except queue.Empty:
             pass
         if self.closing and not self.busy:

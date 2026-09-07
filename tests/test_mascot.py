@@ -105,12 +105,12 @@ class DesktopInteractionTests(unittest.TestCase):
         self.assertFalse(self.app.expanded)
         self.assertEqual(self.root.focus_get(), self.app.caption_button)
         self.app.set_status("Fallo de prueba", "#c36a47", "error")
-        self.assertIn("error", self.app.caption_button.cget("text"))
+        self.assertIn("fallo", self.app.caption_button.cget("text"))
         with patch.dict(os.environ):
             os.environ.pop("RIEGOBOT_COLLECTOR_TOKEN", None)
             self.app.once()
         self.assertFalse(self.app.busy)
-        self.assertIn("Configurar", self.app.caption_button.cget("text"))
+        self.assertEqual(self.app.caption_button.cget("text"), "Revisar fallo")
 
     def test_reduced_motion_no_canvas_or_image_growth(self):
         self.app.reduced_motion.set(True)
@@ -125,7 +125,31 @@ class DesktopInteractionTests(unittest.TestCase):
         self.app.busy = True
         self.app.draw()
         self.assertEqual(self.app.sync_button.cget("state"), "disabled")
-        self.assertIn("Sincronizando", self.app.caption_button.cget("text"))
+        self.assertIn("Leyendo", self.app.caption_button.cget("text"))
+
+    def test_active_motion_reuses_images_and_thought_is_the_only_status_action(self):
+        self.root.deiconify()
+        self.root.update()
+        self.assertLess(self.app.caption_button.winfo_y(), 40)
+        self.assertEqual(self.app.canvas.winfo_height(), 210)
+        images = self.root.tk.call("image", "names")
+        items = self.app.canvas.find_all()
+        for i in range(90):
+            with patch.object(mascot_view.time, "monotonic", return_value=self.app.birth+i/30):
+                self.app.draw()
+        self.assertEqual(images, self.root.tk.call("image", "names"))
+        self.assertEqual(items, self.app.canvas.find_all())
+        self.app.status_kind = "ready"
+        self.app.paused_by_user = False
+        self.app.last_confirmed_at = self.app.birth
+        with patch.object(mascot_view.time, "monotonic", return_value=self.app.birth+1):
+            self.app.draw()
+            self.assertEqual(self.app.caption_button.cget("text"), "En línea")
+            self.assertEqual(self.app.caption_button.cget("bg"), mascot_view.PALETTES["online"]["fill"])
+            self.app.connection_failed = True
+            self.app.draw()
+            self.assertEqual(self.app.caption_button.cget("text"), "Revisar fallo")
+            self.assertEqual(self.app.caption_button.cget("bg"), mascot_view.PALETTES["error"]["fill"])
 
     def test_large_text_and_scroll_follow_keyboard_focus(self):
         self.root.tk.call("tk", "scaling", 2.667)
@@ -148,8 +172,13 @@ class DesktopInteractionTests(unittest.TestCase):
         self.app.status_kind = "ready"
         self.app.draw()
         self.root.update_idletasks()
-        self.assertLessEqual(self.app.caption_button.winfo_reqheight(), 30)
-        self.assertLessEqual(self.app.caption_button.winfo_reqwidth(), 214)
+        self.assertLessEqual(self.app.caption_button.winfo_reqheight(), 28)
+        self.assertLessEqual(self.app.caption_button.winfo_reqwidth(), 104)
+        self.app.connection_failed = True
+        self.app.draw()
+        self.root.update_idletasks()
+        self.assertLessEqual(self.app.caption_button.winfo_reqheight(), 28)
+        self.assertLessEqual(self.app.caption_button.winfo_reqwidth(), 104)
         self.app.reduced_motion.set(True)
         self.app.save_preferences()
         self.assertIn('"reducedMotion": true', self.app.preferences_path.read_text())
