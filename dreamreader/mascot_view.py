@@ -16,6 +16,7 @@ from PIL import ImageTk, Image
 
 BG = "#f2f4ed"
 KEY = "#ff00ff"
+COMPACT_W, COMPACT_H, PANEL_W = 230, 210, 420
 
 
 class CompanionView:
@@ -33,8 +34,8 @@ class CompanionView:
         root.configure(bg=KEY)
         if sys.platform == "win32":
             root.wm_attributes("-transparentcolor", KEY)
-        root.geometry(f"420x340+{max(0, root.winfo_screenwidth()-460)}+{max(0, root.winfo_screenheight()-740)}")
-        self.canvas = tk.Canvas(root, width=420, height=340, bg=KEY, highlightthickness=0)
+        root.geometry(f"230x210+{max(0, root.winfo_screenwidth()-270)}+{max(0, root.winfo_screenheight()-300)}")
+        self.canvas = tk.Canvas(root, width=COMPACT_W, height=COMPACT_H, bg=KEY, highlightthickness=0)
         self.canvas.pack()
         self.canvas.bind("<ButtonPress-1>", self.press)
         self.canvas.bind("<B1-Motion>", self.move)
@@ -92,26 +93,43 @@ class CompanionView:
         return b
 
     def resize(self):
-        target_height = 340 if not self.expanded else (790 if self.page else 600)
-        height = min(target_height, max(480,self.root.winfo_screenheight()-90)) if self.expanded else 340
-        self.root.geometry(f"420x{height}")
         self.root.update_idletasks()
-        x = max(0, min(self.root.winfo_x(), self.root.winfo_screenwidth()-420))
-        y = max(0, min(self.root.winfo_y(), self.root.winfo_screenheight()-height-45))
-        self.root.geometry(f"+{x}+{y}")
+        # Keep the actual desk position when unfolding controls above or below it.
+        scene_left = self.root.winfo_x()+self.canvas.winfo_x()
+        align_right = scene_left >= PANEL_W-COMPACT_W
+        scene_top = self.root.winfo_y()+self.canvas.winfo_y()
+        screen_w, screen_h = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
+        width = PANEL_W if self.expanded else COMPACT_W
+        above = False
+        if self.expanded:
+            desired = 450 if self.page else 265
+            below_space = screen_h-45-scene_top-COMPACT_H
+            above_space = scene_top-30
+            above = below_space < desired and above_space > below_space
+            available = above_space if above else below_space
+            panel_height = min(desired,max(210,available))
+            height = min(COMPACT_H+panel_height,screen_h-60)
+        else:
+            height = COMPACT_H
+        x = scene_left+COMPACT_W-width if align_right else scene_left
+        x = max(0,min(int(x),screen_w-width))
+        y = int(scene_top-(height-COMPACT_H if above else 0))
+        y = max(0,min(y,screen_h-height-45))
+        self.controls.pack_forget()
+        self.canvas.pack_forget()
+        self.canvas.pack(side="bottom" if above else "top",anchor="e" if align_right else "w")
+        if self.expanded:
+            self.controls.pack(fill="both",expand=True,padx=12,side="top")
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        self.root.update_idletasks()
 
     def show_panel(self):
         self.reaction = time.monotonic()
-        if self.expanded:
-            self.collapse()
-        else:
-            self.expanded = True
-            self.controls.pack(fill="both", expand=True, padx=12)
-            self.resize()
+        self.expanded = not self.expanded
+        self.resize()
 
     def collapse(self):
         self.expanded = False
-        self.controls.pack_forget()
         self.resize()
 
     def press(self, e):
@@ -120,7 +138,7 @@ class CompanionView:
     def move(self, e):
         if self.drag:
             x, y, rx, ry = self.drag
-            nx = max(0, min(self.root.winfo_screenwidth()-420, rx+e.x_root-x))
+            nx = max(0, min(self.root.winfo_screenwidth()-self.root.winfo_width(), rx+e.x_root-x))
             ny = max(0, min(self.root.winfo_screenheight()-self.root.winfo_height(), ry+e.y_root-y))
             self.root.geometry(f"+{nx}+{ny}")
 
@@ -134,20 +152,18 @@ class CompanionView:
         c.delete("all")
         now = time.monotonic()
         t = now - self.birth
-        bounce = math.sin(t*1.7)*1.2
-        mouse_x = max(-1,min(1,(self.root.winfo_pointerx()-self.root.winfo_rootx()-210)/210))
-        lean = round(mouse_x*2)/2
-        blink = (t % 5.6 > 5.43)
-        frame_key = (lean, blink)
+        blink = t % 4.7 > 4.51
+        phase = (0,1,2,1)[int(t*5)%4] if self.busy else (0,0,1,0,2,0)[int(t*.8)%6]
+        frame_key = (phase,blink,self.busy)
         if frame_key != self.frame_key:
             self.robot_image = ImageTk.PhotoImage(companion_frame(*frame_key))
             self.frame_key = frame_key
-        c.create_image(0, bounce, anchor="nw", image=self.robot_image)
+        c.create_image(0,0,anchor="nw",image=self.robot_image)
         self.run_button.configure(text="Pausar automático" if self.running else "Iniciar automático", state="disabled" if self.closing else "normal")
         self.sync_button.configure(state="disabled" if self.busy or self.closing else "normal")
-        caption = "Sincronizando…" if self.busy else ("Automático activo" if self.running else "Toca para ver controles")
-        c.create_rectangle(109, 309, 311, 337, fill="#2c4733", outline="")
-        c.create_text(210, 323, text=caption, fill="#e5f3de", font=("Segoe UI", 10))
+        caption = "Sincronizando…" if self.busy else ("Esperando lectura" if self.running else "En pausa · abrir")
+        c.create_rectangle(29, 184, 201, 208, fill="#2c4733", outline="")
+        c.create_text(115, 196, text=caption, fill="#e5f3de", font=("Segoe UI", 9))
 
     def animate(self):
         self.draw()
