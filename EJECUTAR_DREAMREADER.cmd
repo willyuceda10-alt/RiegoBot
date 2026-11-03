@@ -1,7 +1,89 @@
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
+title RiegoBot - DreamReader
 set "BASE=%~dp0"
-where python.exe >nul 2>nul && (python -m dreamreader discovery & exit /b %errorlevel%)
-where py.exe >nul 2>nul && (py -3 -m dreamreader discovery & exit /b %errorlevel%)
-echo Python 3.11 or later was not found. Install Python, then run this file again.
-exit /b 2
+set "RC=0"
+set "COMMAND=%~1"
+set "NO_PAUSE=0"
+if /I "%~2"=="/nopause" set "NO_PAUSE=1"
+if "%COMMAND%"=="" set "COMMAND=discovery"
+
+if /I not "%COMMAND%"=="discovery" if /I not "%COMMAND%"=="extract" if /I not "%COMMAND%"=="extract-candidates" if /I not "%COMMAND%"=="candidate-events-summary" if /I not "%COMMAND%"=="candidate-operational-state" if /I not "%COMMAND%"=="reportsrt-coverage" if /I not "%COMMAND%"=="shared-dream-coverage" if /I not "%COMMAND%"=="reports-history-summary" if /I not "%COMMAND%"=="irrigation-state-candidate" if /I not "%COMMAND%"=="irrigation-confidence-candidate" if /I not "%COMMAND%"=="freshness-sources" if /I not "%COMMAND%"=="incident-candidates" if /I not "%COMMAND%"=="incident-episodes" if /I not "%COMMAND%"=="incident-sla-plan" if /I not "%COMMAND%"=="incident-routing-candidate" if /I not "%COMMAND%"=="incident-sync-candidate" if /I not "%COMMAND%"=="incident-store-summary" if /I not "%COMMAND%"=="incident-lifecycle-contract" if /I not "%COMMAND%"=="incident-outbox-sync" if /I not "%COMMAND%"=="incident-outbox-summary" if /I not "%COMMAND%"=="central-batch-preview" if /I not "%COMMAND%"=="central-push" if /I not "%COMMAND%"=="doctor" (
+  echo [ERROR] Comando no valido: %COMMAND%
+  echo Use: discovery, extract, extract-candidates, candidate-events-summary, candidate-operational-state, reportsrt-coverage, shared-dream-coverage, reports-history-summary, irrigation-state-candidate, irrigation-confidence-candidate, freshness-sources, incident-candidates, incident-episodes, incident-sla-plan, incident-routing-candidate, incident-sync-candidate, incident-store-summary, incident-lifecycle-contract, incident-outbox-sync, incident-outbox-summary, central-batch-preview, central-push o doctor.
+  set "RC=4"
+  goto :END
+)
+
+echo ============================================
+echo   RiegoBot - DreamReader
+echo ============================================
+echo.
+echo Comando: %COMMAND%
+echo Carpeta del proyecto:
+echo %BASE%
+echo.
+
+pushd "%BASE%" >nul 2>nul
+if errorlevel 1 (
+  echo [ERROR] No se pudo acceder a la carpeta del proyecto.
+  echo %BASE%
+  set "RC=3"
+  goto :END
+)
+
+where python.exe >nul 2>nul
+if not errorlevel 1 (
+  echo Python detectado:
+  python --version
+  echo.
+  echo Ejecutando %COMMAND%...
+  echo.
+  python -m dreamreader %COMMAND%
+  set "RC=!ERRORLEVEL!"
+  goto :AFTER_RUN
+)
+
+where py.exe >nul 2>nul
+if not errorlevel 1 (
+  echo Python Launcher detectado:
+  py -3 --version
+  echo.
+  echo Ejecutando %COMMAND%...
+  echo.
+  py -3 -m dreamreader %COMMAND%
+  set "RC=!ERRORLEVEL!"
+  goto :AFTER_RUN
+)
+
+echo [ERROR] Python 3.11 o posterior no fue encontrado.
+echo Instale Python y vuelva a ejecutar este archivo.
+set "RC=2"
+goto :END
+
+:AFTER_RUN
+echo.
+if "%RC%"=="0" (
+  echo [OK] DreamReader termino correctamente.
+) else (
+  echo [ERROR] DreamReader termino con codigo %RC%.
+)
+
+:END
+echo.
+echo ============================================
+echo Codigo de salida: %RC%
+echo ============================================
+echo.
+if exist "%BASE%logs" (
+  echo Los logs se guardan dentro de:
+  echo %BASE%logs
+  echo.
+)
+if "%NO_PAUSE%"=="0" (
+  echo Presione una tecla para cerrar esta ventana.
+  pause >nul
+)
+
+popd >nul 2>nul
+exit /b %RC%

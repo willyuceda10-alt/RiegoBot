@@ -1,6 +1,9 @@
 {
-  "version": "1.3.2-alpha",
+  "version": "2.0.3-alpha",
   "readOnly": true,
+  "site": {
+    "timezone": "America/Lima"
+  },
   "collector": {
     "collectorId": "COLLECTOR-LOCAL-01",
     "siteId": "SITE01",
@@ -22,5 +25,72 @@
   },
   "extractionMode": "DISCOVERY",
   "allowCandidateMappings": false,
-  "dreams": []
+  "dreams": [],
+  "realtime": {
+    "enabled": true,
+    "pollIntervalSeconds": 30,
+    "allowCandidateMappings": false,
+    "maxConsecutiveFailures": 10,
+    "retentionSessions": 120
+  },
+  "operationalState": {
+    "maxEvidenceAgeMinutes": 10,
+    "allowStaleForTesting": false
+  },
+  "incidents": {
+    "mode": "candidate",
+    "sendWhatsApp": false,
+    "repeatUntilResolved": true,
+    "requirePhotoEvidence": false,
+    "requireObservation": true,
+    "episodeGapMinutes": 30,
+    "slaPreviewReminders": 5
+  },
+  "routing": {
+    "mode": "candidate",
+    "requiredRoles": [
+      "REGADOR",
+      "SUPERVISOR",
+      "COORDINADOR"
+    ],
+    "users": [],
+    "assignments": []
+  },
+  "incidentPersistence": {
+    "backend": "sqlite",
+    "path": "runtime/incident_state.db",
+    "migrationTarget": "AZURE_POSTGRESQL"
+  },
+  "notifications": {
+    "mode": "candidate",
+    "channel": "WHATSAPP",
+    "realSendingEnabled": false,
+    "outboxEnabled": true
+  },
+  "incidentEvidencePolicies": {
+    "mode": "candidate",
+    "policySource": "LOCAL_CONFIG_UNTIL_AZURE",
+    "default": {
+      "requiresPhotoEvidence": false,
+      "requiresObservation": true,
+      "requiresResolutionValidation": true
+    },
+    "byIncidentType": {
+      "EXAMPLE_INCIDENT_REQUIRING_PHOTO": {
+        "requiresPhotoEvidence": true
+      }
+    }
+  },
+  "azureCentral": {
+    "enabled": false,
+    "apiBaseUrl": "https://<riegobot-central-api>/",
+    "ingestPath": "/api/v1/collector/incident-batches",
+    "deliveryMode": "TEST_REPLAY",
+    "target": "AZURE_CONTAINER_APPS_POSTGRESQL",
+    "apiKeyEnvironmentVariable": "RIEGOBOT_COLLECTOR_API_KEY",
+    "allowHttpLocalhost": true,
+    "timeoutSeconds": 15,
+    "maxRetries": 3,
+    "retryBackoffSeconds": 2
+  }
 }

@@ -5,11 +5,14 @@
 *.laccdb
 
 # Runtime outputs and logs
+runtime/*
+!runtime/.gitkeep
 output/*
 !output/.gitkeep
 logs/*
 !logs/.gitkeep
 validation_report.json
+portability_report.json
 *.zip
 
 # Local configuration

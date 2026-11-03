@@ -2,37 +2,242 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
-import secrets
-import socket
-from datetime import datetime
+from pathlib import Path
 
 from . import PROJECT_ROOT, __version__
+from .bridge import invoke_readonly_bridge
+from .candidate_analysis import build_candidate_operational_state, summarize_candidate_events
+from .reports_coverage import summarize_reportsrt_coverage
+from .shared_coverage import summarize_shared_dream_coverage
+from .reports_history import summarize_reports_history
+from .irrigation_state import build_irrigation_state_candidate
+from .irrigation_confidence import build_irrigation_confidence_candidate
+from .freshness_sources import summarize_freshness_sources
+from .incidents import build_incident_candidates
+from .incident_workflow import build_incident_episodes, build_incident_sla_plan
+from .routing import build_incident_routing_candidate
+from .incident_store import sync_incident_store_candidate, incident_store_summary
+from .incident_lifecycle import lifecycle_contract, sync_notification_outbox_candidate, notification_outbox_summary
+from .central_sync import build_central_batch_preview
+from .central_client import push_central_batch
 from .config import load_config
-from .discovery import discover_dreams
+from .discovery import discover_dreams, get_discovery_info
+from .runtime import write_discovery_outputs
+from .realtime import run_realtime_collector
+from .query import answer_operator_question, build_operator_message, build_romeo_query, build_romeo_summary
+from .session import create_session
 from .validation import python_version_ok
-
-
-def _safe(value: str) -> str:
-    return re.sub(r"[^A-Za-z0-9_-]", "_", value) or "unknown"
-
-
-def build_session_id() -> str:
-    return f"{datetime.now():%Y%m%d_%H%M%S}_{_safe(socket.gethostname())}_{_safe(__import__('getpass').getuser())}_{secrets.token_hex(3)}"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="DreamReader portable control plane")
-    parser.add_argument("command", choices=("discovery", "extract"), nargs="?", default="discovery")
+    parser.add_argument(
+        "command",
+        choices=("discovery", "extract", "extract-candidates", "candidate-events-summary", "candidate-operational-state", "reportsrt-coverage", "shared-dream-coverage", "reports-history-summary", "irrigation-state-candidate", "irrigation-confidence-candidate", "freshness-sources", "incident-candidates", "incident-episodes", "incident-sla-plan", "incident-routing-candidate", "incident-sync-candidate", "incident-store-summary", "incident-lifecycle-contract", "incident-outbox-sync", "incident-outbox-summary", "central-batch-preview", "central-push", "realtime", "romeo", "romeo-summary", "romeo-message", "ask", "doctor"),
+        nargs="?",
+        default="discovery",
+    )
+    parser.add_argument("target", nargs="?")
     args = parser.parse_args()
+
     if not python_version_ok():
         print("DreamReader requires Python 3.11 or later.")
         return 2
+
+    if args.command == "ask":
+        if args.target is None:
+            print(json.dumps({"success": False, "error": "Use: python -m dreamreader ask \"pregunta\""}, indent=2, ensure_ascii=False))
+            return 2
+        query_config = load_config(PROJECT_ROOT)
+        site_timezone = str(query_config.get("site", {}).get("timezone", "UTC"))
+        payload = answer_operator_question(PROJECT_ROOT, str(args.target), site_timezone=site_timezone)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 6
+
+    if args.command in {"romeo", "romeo-summary", "romeo-message"}:
+        if args.target is None or not str(args.target).isdigit():
+            print(json.dumps({"success": False, "error": "Use: python -m dreamreader romeo <numero>"}, indent=2, ensure_ascii=False))
+            return 2
+        query_config = load_config(PROJECT_ROOT)
+        site_timezone = str(query_config.get("site", {}).get("timezone", "UTC"))
+        if args.command == "romeo-summary":
+            payload = build_romeo_summary(
+                PROJECT_ROOT,
+                str(args.target),
+                site_timezone=site_timezone,
+            )
+        elif args.command == "romeo-message":
+            payload = build_operator_message(
+                PROJECT_ROOT,
+                str(args.target),
+                site_timezone=site_timezone,
+            )
+        else:
+            payload = build_romeo_query(PROJECT_ROOT, str(args.target))
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 6
+
+    if args.command == "candidate-events-summary":
+        payload = summarize_candidate_events(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "candidate-operational-state":
+        payload = build_candidate_operational_state(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "reportsrt-coverage":
+        payload = summarize_reportsrt_coverage(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "shared-dream-coverage":
+        payload = summarize_shared_dream_coverage(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "reports-history-summary":
+        payload = summarize_reports_history(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "irrigation-state-candidate":
+        payload = build_irrigation_state_candidate(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "irrigation-confidence-candidate":
+        payload = build_irrigation_confidence_candidate(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "freshness-sources":
+        payload = summarize_freshness_sources(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-candidates":
+        payload = build_incident_candidates(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-episodes":
+        payload = build_incident_episodes(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-sla-plan":
+        payload = build_incident_sla_plan(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-routing-candidate":
+        payload = build_incident_routing_candidate(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-sync-candidate":
+        payload = sync_incident_store_candidate(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-store-summary":
+        payload = incident_store_summary(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-lifecycle-contract":
+        payload = lifecycle_contract()
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-outbox-sync":
+        payload = sync_notification_outbox_candidate(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "incident-outbox-summary":
+        payload = notification_outbox_summary(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "central-batch-preview":
+        payload = build_central_batch_preview(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 7
+
+    if args.command == "central-push":
+        payload = push_central_batch(PROJECT_ROOT)
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0 if payload.get("success") else 8
+
+    if args.command == "realtime":
+        return run_realtime_collector(PROJECT_ROOT)
+
     config = load_config(PROJECT_ROOT)
-    payload = {"version": __version__, "projectRoot": str(PROJECT_ROOT), "collector": config["collector"], "sessionIdPreview": build_session_id(), "dreams": discover_dreams(PROJECT_ROOT, config)}
-    if args.command == "extract":
-        payload["notice"] = "MDB extraction remains on the tested PowerShell bridge in this migration phase."
-    print(json.dumps(payload, indent=2))
+    discovery_info = get_discovery_info(PROJECT_ROOT, config)
+
+    if args.command == "doctor":
+        payload = {
+            "version": __version__,
+            "projectRoot": str(PROJECT_ROOT),
+            "collector": config["collector"],
+            "python": "OK",
+            "portableRoot": True,
+            "readOnly": bool(config.get("readOnly", False)),
+            "discovery": discovery_info,
+        }
+        if discovery_info["matchingFileCount"] == 0:
+            payload["warning"] = "No se encontraron bases Dream para lectura."
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0
+
+    session = create_session(PROJECT_ROOT, config)
+    dreams = discover_dreams(PROJECT_ROOT, config)
+    write_discovery_outputs(session.output_dir, dreams)
+
+    payload = {
+        "version": __version__,
+        "projectRoot": str(PROJECT_ROOT),
+        "collector": config["collector"],
+        "session": session.to_dict(),
+        "discovery": discovery_info,
+        "dreams": dreams,
+    }
+
+    if discovery_info["matchingFileCount"] == 0:
+        payload["warning"] = (
+            "No se encontraron bases Dream. "
+            f"Ruta resuelta: {discovery_info['rootPath']}"
+        )
+
+    if args.command in {"extract", "extract-candidates"}:
+        if not dreams:
+            payload["error"] = (
+                "Extraccion cancelada: no hay controladores Dream disponibles. "
+                "No se ejecutara el bridge MDB."
+            )
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            return 5
+
+        bridge = invoke_readonly_bridge(
+            PROJECT_ROOT,
+            "NORMALIZED",
+            Path(discovery_info["rootPath"]),
+            allow_candidate_mappings=args.command == "extract-candidates",
+        )
+        payload["candidateMappingsEnabled"] = args.command == "extract-candidates"
+        payload["mdbBridge"] = bridge.to_dict()
+        if not bridge.success:
+            payload["error"] = (
+                "El bridge MDB no produjo una sesion valida. "
+                "Revise sessionSummary, stdout/stderr y los logs."
+            )
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            return bridge.exit_code or 1
+
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
     return 0
 
 

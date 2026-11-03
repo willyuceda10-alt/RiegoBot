@@ -1,32 +1,159 @@
 from __future__ import annotations
 
 import fnmatch
+import os
 from pathlib import Path
 from typing import Any
 
 
-def resolve_path(project_root: Path, configured_path: str) -> Path:
-    path = Path(configured_path)
-    return path if path.is_absolute() else (project_root / path).resolve()
+ENV_DREAM_ROOT = "RIEGOBOT_DREAM_ROOT"
+
+
+def _candidate_roots(project_root: Path, configured_path: str) -> list[tuple[str, Path]]:
+    configured = Path(configured_path)
+    candidates: list[tuple[str, Path]] = []
+
+    override = os.environ.get(ENV_DREAM_ROOT, "").strip()
+    if override:
+        candidates.append(("environment", Path(override)))
+
+    configured_resolved = (
+        configured
+        if configured.is_absolute()
+        else (project_root / configured).resolve()
+    )
+    candidates.append(("config", configured_resolved))
+
+    # Check the project and nearby ancestor layouts. This remains portable:
+    # all candidates are derived from the project location, never a username.
+    current = project_root
+    for depth in range(0, 4):
+        label = "project" if depth == 0 else f"ancestor{depth}"
+        candidates.extend(
+            [
+                (f"auto:{label}/Dream", current / "Dream"),
+                (
+                    f"auto:{label}/Dream_Realtime/Dream",
+                    current / "Dream_Realtime" / "Dream",
+                ),
+                (f"auto:{label}/Dream_Realtime", current / "Dream_Realtime"),
+            ]
+        )
+        if current.parent == current:
+            break
+        current = current.parent
+
+    seen: set[str] = set()
+    unique: list[tuple[str, Path]] = []
+    for source, candidate in candidates:
+        resolved = candidate.resolve()
+        key = str(resolved).lower()
+        if key not in seen:
+            seen.add(key)
+            unique.append((source, resolved))
+    return unique
+
+
+def resolve_discovery_root(
+    project_root: Path,
+    config: dict[str, Any],
+) -> tuple[str, Path]:
+    configured_path = config["discovery"]["rootPath"]
+    pattern = config["discovery"]["dreamPattern"]
+    candidates = _candidate_roots(project_root, configured_path)
+
+    for source, root in candidates:
+        if root.is_dir() and any(
+            item.is_file() and fnmatch.fnmatch(item.name.lower(), pattern.lower())
+            for item in root.iterdir()
+        ):
+            return source, root
+
+    for source, root in candidates:
+        if source in {"environment", "config"} and root.is_dir():
+            return source, root
+
+    for source, root in candidates:
+        if source == "config":
+            return source, root
+
+    return candidates[0]
+
+
+def get_discovery_info(project_root: Path, config: dict[str, Any]) -> dict[str, Any]:
+    source, root = resolve_discovery_root(project_root, config)
+    pattern = config["discovery"]["dreamPattern"]
+
+    matches: list[str] = []
+    if root.is_dir():
+        matches = sorted(
+            item.name
+            for item in root.iterdir()
+            if item.is_file()
+            and fnmatch.fnmatch(item.name.lower(), pattern.lower())
+        )
+
+    return {
+        "rootPath": str(root),
+        "rootExists": root.is_dir(),
+        "pattern": pattern,
+        "source": source,
+        "environmentVariable": ENV_DREAM_ROOT,
+        "matchingFiles": matches,
+        "matchingFileCount": len(matches),
+        "candidatesChecked": [
+            {"source": candidate_source, "path": str(candidate_path)}
+            for candidate_source, candidate_path in _candidate_roots(
+                project_root,
+                config["discovery"]["rootPath"],
+            )
+        ],
+    }
 
 
 def discover_dreams(project_root: Path, config: dict[str, Any]) -> list[dict[str, Any]]:
-    root = resolve_path(project_root, config["discovery"]["rootPath"])
+    _, root = resolve_discovery_root(project_root, config)
     configured = {str(item["dreamId"]): item for item in config.get("dreams", [])}
     result: list[dict[str, Any]] = []
+
     if not root.is_dir():
         return result
+
     for path in sorted(root.iterdir()):
-        if not path.is_file() or not fnmatch.fnmatch(path.name.lower(), config["discovery"]["dreamPattern"].lower()):
+        if not path.is_file() or not fnmatch.fnmatch(
+            path.name.lower(),
+            config["discovery"]["dreamPattern"].lower(),
+        ):
             continue
+
         stem = path.stem
         if not stem.lower().startswith("dream") or "_" not in stem:
             continue
+
         dream_id = stem[5:].split("_", 1)[0]
         if not dream_id.isdecimal():
             continue
+
         item = configured.get(dream_id, {})
         enabled = item.get("enabled", True)
         site_id = config["collector"]["siteId"]
-        result.append({"collectorId": config["collector"]["collectorId"], "siteId": site_id, "dreamKey": f"{site_id}-DREAM-{dream_id}", "dreamId": dream_id, "dreamName": item.get("name", f"Dream {dream_id}"), "databasePath": str(path), "status": "CONFIGURED" if item and enabled else "DISABLED" if item else "DISCOVERED"})
+
+        result.append(
+            {
+                "collectorId": config["collector"]["collectorId"],
+                "siteId": site_id,
+                "dreamKey": f"{site_id}-DREAM-{dream_id}",
+                "dreamId": dream_id,
+                "dreamName": item.get("name", f"Dream {dream_id}"),
+                "databasePath": str(path),
+                "status": (
+                    "CONFIGURED"
+                    if item and enabled
+                    else "DISABLED"
+                    if item
+                    else "DISCOVERED"
+                ),
+            }
+        )
+
     return result

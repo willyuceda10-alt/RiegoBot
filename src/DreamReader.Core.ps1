@@ -18,6 +18,9 @@ function New-SessionDirectory {
 
 function Resolve-ConfiguredPath {
     param([string]$BaseDirectory, [string]$ConfiguredPath)
+    if (-not [string]::IsNullOrWhiteSpace($env:RIEGOBOT_DREAM_ROOT)) {
+        return [System.IO.Path]::GetFullPath($env:RIEGOBOT_DREAM_ROOT)
+    }
     if ([System.IO.Path]::IsPathRooted($ConfiguredPath)) { return $ConfiguredPath }
     return [System.IO.Path]::GetFullPath((Join-Path $BaseDirectory $ConfiguredPath))
 }
@@ -211,20 +214,85 @@ function Invoke-DreamReader {
     $columns | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_columns.csv') -NoTypeInformation -Encoding utf8
     $comparison = @(Get-SchemaComparison $columns); $comparison | Export-Csv -LiteralPath (Join-Path $sessionDir 'schema_comparison.csv') -NoTypeInformation -Encoding utf8
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
-    $normalizedRows = @(); $waterMeterRows = @()
+    $normalizedRows = @(); $waterMeterRows = @(); $flowObservationRows = @(); $romeoSnapshotRows = @(); $accumulationRows = @(); $accumulationSummaryRows = @(); $operationalEventRows = @(); $reportsRTCoverageRows = @(); $sharedDreamCoverageRows = @(); $reportsHistoryRows = @(); $irrigationStateRows = @(); $freshnessSourceRows = @()
     if ($ExtractionMode -eq 'NORMALIZED') {
+        . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
+
         try {
-            . (Join-Path $BaseDirectory 'src\NormalizedExtraction.ps1')
             $normalizedRows = @(Invoke-NormalizedExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("DreamStatus extraction: $($_.Exception.Message)")
+        }
+
+        try {
             $waterMeterRows = @(Invoke-WaterMeterExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
-        } catch { $errors.Add("Normalized extraction: $($_.Exception.Message)") }
+        } catch {
+            $errors.Add("WaterMeters extraction: $($_.Exception.Message)")
+        }
+
+        try {
+            $flowObservationRows = @(Invoke-FlowObservationExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("FlowObservations extraction: $($_.Exception.Message)")
+        }
+
+        try {
+            $romeoSnapshotRows = @(Export-RomeoSnapshot -WaterMeters $waterMeterRows -FlowObservations $flowObservationRows -SessionDirectory $sessionDir)
+        } catch {
+            $errors.Add("RomeoSnapshot export: $($_.Exception.Message)")
+        }
+
+        try {
+            $accumulationRows = @(Invoke-AccumulationObservationExtraction -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+            if ($accumulationRows.Count -gt 0) {
+                $accumulationSummaryRows = @(Export-AccumulationSummary -AccumulationObservations $accumulationRows -SessionDirectory $sessionDir)
+            }
+        } catch {
+            $errors.Add("AccumulationObservations extraction: $($_.Exception.Message)")
+        }
+
+        try {
+            $operationalEventRows = @(Invoke-OperationalEventInvestigation -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("OperationalEvents investigation: $($_.Exception.Message)")
+        }
+
+        try {
+            $reportsRTCoverageRows = @(Invoke-ReportsRTCoverageInvestigation -BaseDirectory $BaseDirectory -Config $config -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("ReportsRT coverage investigation: $($_.Exception.Message)")
+        }
+
+        try {
+            $sharedDreamCoverageRows = @(Invoke-SharedDreamCoverageInvestigation -BaseDirectory $BaseDirectory -Config $config -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("Shared Dream coverage investigation: $($_.Exception.Message)")
+        }
+
+        try {
+            $reportsHistoryRows = @(Invoke-ReportsHistoryInvestigation -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("Reports history investigation: $($_.Exception.Message)")
+        }
+
+        try {
+            $irrigationStateRows = @(Invoke-IrrigationStateCandidateInvestigation -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("Irrigation state investigation: $($_.Exception.Message)")
+        }
+
+        try {
+            $freshnessSourceRows = @(Invoke-FreshnessSourceInvestigation -BaseDirectory $BaseDirectory -Config $config -Dreams $dreams -SessionDirectory $sessionDir -Metrics $metrics -LogPath $logPath -AllowCandidateMappings $AllowCandidateMappings)
+        } catch {
+            $errors.Add("Freshness source investigation: $($_.Exception.Message)")
+        }
     }
     $metrics | Export-Csv -LiteralPath (Join-Path $sessionDir 'performance.csv') -NoTypeInformation -Encoding utf8
     $ended = Get-Date
-    $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
+    $session = [ordered]@{ SessionId=$sessionId; StartTime=$started.ToString('o'); EndTime=$ended.ToString('o'); CollectorId=[string]$config.collector.collectorId; SiteId=[string]$config.collector.siteId; DreamsDiscovered=@($dreams | Where-Object FileExists).Count; DatabasesRead=@($metrics | Where-Object { $_.Operation -eq 'SchemaRead' -and $_.Success }).Count; ExtractionMode=$ExtractionMode; NormalizedEntities=@{ DreamStatus=$normalizedRows.Count; WaterMeters=$waterMeterRows.Count; FlowObservations=$flowObservationRows.Count; RomeoSnapshot=$romeoSnapshotRows.Count; AccumulationObservations=$accumulationRows.Count; AccumulationSummary=$accumulationSummaryRows.Count; OperationalEventsCandidate=$operationalEventRows.Count; ReportsRTCoverageCandidate=$reportsRTCoverageRows.Count; SharedDreamCoverageCandidate=$sharedDreamCoverageRows.Count; ReportsHistoryCandidate=$reportsHistoryRows.Count; IrrigationStateSourcesCandidate=$irrigationStateRows.Count; FreshnessSourcesCandidate=$freshnessSourceRows.Count }; Errors=@($errors); Warnings=@($warnings); Version=[string]$config.version }
     $session | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $sessionDir 'session.json') -Encoding utf8
-    $comparisonSummary = "`n## Automated comparison results`n`nSession: $sessionId`n`nRows generated: $($comparison.Count). This section is produced from actual schema discovery; databases that could not be opened are represented by the session errors, not guessed.`n"
-    Add-Content -LiteralPath (Join-Path $BaseDirectory 'docs\DREAM_SCHEMA_COMPARISON.md') -Value $comparisonSummary -Encoding utf8
+    $comparisonSummary = "## Automated comparison results`n`nSession: $sessionId`n`nRows generated: $($comparison.Count). This section is produced from actual schema discovery; databases that could not be opened are represented by the session errors, not guessed.`n"
+    Set-Content -LiteralPath (Join-Path $sessionDir 'schema_comparison_summary.md') -Value $comparisonSummary -Encoding utf8
     Write-ReaderLog $logPath 'INFO' 'Session' '' '' "Completed with $($errors.Count) error(s)."
     [pscustomobject]@{ SessionDirectory=$sessionDir; Session=$session; Errors=$errors; LogPath=$logPath }
 }
