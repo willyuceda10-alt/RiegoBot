@@ -1,0 +1,19 @@
+{
+  "readOnly": true,
+  "sources": [
+    {
+      "sourceId": "SOURCE-01",
+      "siteId": "SITE-01",
+      "folder": "\\\\example.invalid\\authorized-folder",
+      "enabled": false,
+      "pollSeconds": 30
+    },
+    {
+      "sourceId": "SOURCE-02",
+      "siteId": "SITE-02",
+      "folder": "C:\\Example\\AuthorizedFolder",
+      "enabled": false,
+      "pollSeconds": 60
+    }
+  ]
+}
