@@ -32,12 +32,13 @@ class BridgeTests(unittest.TestCase):
                 parse_probe(raw)
 
     def test_runner_success(self):
-        runner = Mock(return_value=subprocess.CompletedProcess([], 0, payload(), ""))
+        runner = Mock(return_value=subprocess.CompletedProcess([], 0, payload().encode("utf-8"), b""))
         self.assertEqual(run_probe(["local-test"], runner=runner)["status"], "PROVIDERS_CHECKED")
         self.assertEqual(runner.call_args.kwargs["timeout"], 30)
+        self.assertFalse(runner.call_args.kwargs["text"])
 
     def test_runner_failure(self):
-        runner = Mock(return_value=subprocess.CompletedProcess([], 1, "", "private error"))
+        runner = Mock(return_value=subprocess.CompletedProcess([], 1, b"", b"private error"))
         with self.assertRaises(BridgeError) as exc:
             run_probe(["local-test"], runner=runner)
         self.assertNotIn("private error", str(exc.exception))
@@ -49,3 +50,22 @@ class BridgeTests(unittest.TestCase):
     def test_missing_process(self):
         with self.assertRaises(BridgeError):
             run_probe(["local-test"], runner=Mock(side_effect=FileNotFoundError("private path")))
+
+    def test_non_utf8_stderr_on_failure(self):
+        runner = Mock(return_value=subprocess.CompletedProcess([], 1, b"", b"error \xa2 private"))
+        with self.assertRaisesRegex(BridgeError, "exited with code 1") as exc:
+            run_probe(["local-test"], runner=runner)
+        self.assertNotIn("private", str(exc.exception))
+
+    def test_non_utf8_stderr_on_success(self):
+        runner = Mock(return_value=subprocess.CompletedProcess([], 0, payload().encode("utf-8"), b"\xa2"))
+        self.assertEqual(run_probe(["local-test"], runner=runner)["status"], "PROVIDERS_CHECKED")
+
+    def test_non_utf8_stdout_is_rejected(self):
+        runner = Mock(return_value=subprocess.CompletedProcess([], 0, b"\xa2", b""))
+        with self.assertRaisesRegex(BridgeError, "not valid UTF-8"):
+            run_probe(["local-test"], runner=runner)
+
+    def test_utf8_bom(self):
+        runner = Mock(return_value=subprocess.CompletedProcess([], 0, payload().encode("utf-8-sig"), b""))
+        self.assertEqual(run_probe(["local-test"], runner=runner)["status"], "PROVIDERS_CHECKED")

@@ -43,14 +43,21 @@ def parse_probe(raw: str) -> dict:
 
 def run_probe(command: list[str], *, runner=subprocess.run, timeout: int = 30) -> dict:
     try:
-        result = runner(command, capture_output=True, text=True, encoding="utf-8", errors="strict", timeout=timeout, check=False)
+        result = runner(command, capture_output=True, text=False, timeout=timeout, check=False)
     except subprocess.TimeoutExpired:
         raise BridgeError("Local probe timed out.") from None
-    except (OSError, UnicodeError):
+    except OSError:
         raise BridgeError("Local PowerShell could not be run.") from None
     if result.returncode != 0:
-        raise BridgeError("Local probe failed; check authorized PowerShell policy and dependencies.")
-    return parse_probe(result.stdout)
+        raise BridgeError(f"Local PowerShell exited with code {result.returncode}; check authorized execution policy and dependencies.")
+    # Windows PowerShell can emit localized diagnostics in an OEM/ANSI encoding,
+    # including before our script sets UTF-8. Never decode stderr as UTF-8.
+    # Only successful stdout participates in the strict JSON contract.
+    try:
+        raw = result.stdout.decode("utf-8-sig")
+    except (UnicodeError, AttributeError):
+        raise BridgeError("Successful PowerShell output was not valid UTF-8.") from None
+    return parse_probe(raw)
 
 
 def probe_local(fixture: Path | None = None) -> dict:
