@@ -37,6 +37,10 @@ def valid_folder(value: object) -> bool:
     if value.startswith(("\\\\?\\", "\\\\.\\")):
         return False
     path = PureWindowsPath(value)
+    if path.drive.startswith("\\\\"):
+        share = path.drive[2:].split("\\")
+        if len(share) != 2 or not all(share):
+            return False
     return path.is_absolute() and ".." not in path.parts
 
 
