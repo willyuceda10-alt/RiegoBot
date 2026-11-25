@@ -1,4 +1,12 @@
-# RiegoBot / DreamReader 1.3.2-alpha
+# Valvi — Asistente inteligente de riego
+
+**Current release: 1.3.2-alpha (DreamReader collector).**
+
+## Product vision
+
+Valvi is intended to provide near-real-time, read-only irrigation monitoring, anomaly detection, automated irrigation reports and authorized natural-language queries via the official WhatsApp Business Platform. The actual monitoring latency depends on source database refresh intervals and must be measured. Operational alerts will use validated data and configurable rules; conversational AI will summarize verified readings without inventing measurements or controlling irrigation equipment. These features are planned, not implemented in the current alpha.
+
+## Current implementation
 
 DreamReader is a read-only discovery and schema inventory tool for multiple Dream MDB instances.
 
